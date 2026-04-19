@@ -15,6 +15,8 @@
 - [ ] **Step 6** — Contas a Pagar / A Receber
 - [ ] **Step 7** — Dashboard e Indicadores (IEF, PE)
 - [ ] **Step 8** — Importação de Extrato + LLM
+- [ ] **Step 9** — Onboarding e Configurações *(renumerado)*
+- [ ] **Step 10** — Observabilidade (Logs, Métricas, Alertas)
 
 ---
 
@@ -269,6 +271,27 @@
 - [ ] Criar `pages/settings/UsersPage.tsx` (convite, roles)
 - [ ] Criar `pages/settings/GoalsPage.tsx` (metas mensais por conta)
 - [ ] Criar `pages/settings/BreakevenConfigPage.tsx`
+
+---
+
+## Step 10 — Observabilidade
+
+### Infraestrutura (Docker Compose)
+- [ ] Adicionar serviço `prometheus` ao `docker-compose.yml`
+- [ ] Adicionar serviço `grafana` ao `docker-compose.yml`
+- [ ] Criar `prometheus.yml` com scrape config apontando para `api:3000/metrics`
+
+### Backend (NestJS)
+- [ ] Instalar `pino` + `nestjs-pino` — substituir logger padrão por JSON estruturado
+- [ ] Instalar `@willsoto/nestjs-prometheus` — expor endpoint `GET /metrics`
+- [ ] Criar métricas customizadas: `http_requests_total`, `http_request_duration_seconds`, `db_query_duration_seconds`
+- [ ] Configurar log level por ambiente (debug em dev, info em prod)
+- [ ] Adicionar `requestId` em todos os logs de request (correlação)
+
+### Dashboards Grafana
+- [ ] Criar dashboard HTTP: requests/s, latência p50/p95/p99, erros 4xx/5xx
+- [ ] Criar dashboard DB: queries lentas, pool de conexões
+- [ ] Criar dashboard de negócio: tenants ativos, lançamentos criados/dia
 
 ---
 

@@ -16,7 +16,8 @@ export class TenantContextInterceptor implements NestInterceptor {
     const tenantId = request.tenantId;
 
     if (tenantId) {
-      void this.prisma.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`;
+      void this.prisma
+        .$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`;
     }
 
     return next.handle();

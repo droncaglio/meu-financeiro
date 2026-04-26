@@ -1,4 +1,4 @@
-meu-financeiro.vps-kinghost.net {
+meu-financeiro.vps-kinghost.net, mytestdomain.com.br, www.mytestdomain.com.br {
     handle /api/* {
         reverse_proxy api:3000
     }

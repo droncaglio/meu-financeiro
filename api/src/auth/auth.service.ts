@@ -3,12 +3,13 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { TenantStatus, TenantUserRole } from '@prisma/client';
+import { Prisma, TenantStatus, TenantUserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
@@ -17,6 +18,9 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+
+export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -36,7 +40,8 @@ export class AuthService {
     const pepper = this.config.getOrThrow<string>('APP_PEPPER');
     const passwordHash = await bcrypt.hash(pepper + dto.password, 12);
     const emailVerifyToken = randomBytes(32).toString('hex');
-    const slug = await this.uniqueSlug(dto.companyName);
+    const emailVerifyExp = new Date(Date.now() + EMAIL_VERIFY_TTL_MS);
+    const slugBase = this.toSlugBase(dto.companyName);
 
     const user = await this.prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
@@ -45,11 +50,36 @@ export class AuthService {
           name: dto.name,
           passwordHash,
           emailVerifyToken,
+          emailVerifyExp,
         },
       });
-      const tenant = await tx.tenant.create({
-        data: { name: dto.companyName, slug, status: TenantStatus.active },
-      });
+
+      let tenant: Awaited<ReturnType<typeof tx.tenant.create>> | null = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const slug =
+          attempt === 0
+            ? slugBase
+            : `${slugBase}-${randomBytes(3).toString('hex')}`;
+        try {
+          tenant = await tx.tenant.create({
+            data: { name: dto.companyName, slug, status: TenantStatus.active },
+          });
+          break;
+        } catch (e) {
+          if (
+            e instanceof Prisma.PrismaClientKnownRequestError &&
+            e.code === 'P2002'
+          ) {
+            continue;
+          }
+          throw e;
+        }
+      }
+      if (!tenant)
+        throw new InternalServerErrorException(
+          'Não foi possível gerar slug único',
+        );
+
       await tx.tenantUser.create({
         data: {
           userId: created.id,
@@ -68,19 +98,28 @@ export class AuthService {
 
   async verifyEmail(token: string) {
     const user = await this.prisma.user.findFirst({
-      where: { emailVerifyToken: token },
+      where: {
+        emailVerifyToken: token,
+        emailVerifyExp: { gt: new Date() },
+      },
       include: { tenantUsers: true },
     });
 
-    if (!user) throw new NotFoundException('Token inválido ou já utilizado');
+    if (!user) throw new NotFoundException('Token inválido ou expirado');
     if (user.emailVerifiedAt)
       throw new BadRequestException('E-mail já verificado');
 
     const tenantUser = user.tenantUsers[0];
+    if (!tenantUser)
+      throw new InternalServerErrorException('Configuração de tenant ausente');
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { emailVerifiedAt: new Date(), emailVerifyToken: null },
+      data: {
+        emailVerifiedAt: new Date(),
+        emailVerifyToken: null,
+        emailVerifyExp: null,
+      },
     });
 
     return this.mintTokens(user.id, tenantUser.tenantId, tenantUser.role);
@@ -162,13 +201,14 @@ export class AuthService {
 
     const tenantUser = await this.prisma.tenantUser.findFirst({
       where: { userId: record.userId, tenantId: record.tenantId ?? undefined },
+      include: { tenant: true },
     });
 
-    return this.mintTokens(
-      record.userId,
-      record.tenantId!,
-      tenantUser?.role ?? TenantUserRole.viewer,
-    );
+    if (!tenantUser || tenantUser.tenant.status !== TenantStatus.active) {
+      throw new UnauthorizedException('Acesso ao tenant revogado ou inativo');
+    }
+
+    return this.mintTokens(record.userId, record.tenantId!, tenantUser.role);
   }
 
   async logout(currentToken: string | undefined) {
@@ -189,7 +229,10 @@ export class AuthService {
     };
     if (!user) return msg;
 
-    const resetPasswordToken = randomBytes(32).toString('hex');
+    const rawToken = randomBytes(32).toString('hex');
+    const resetPasswordToken = createHash('sha256')
+      .update(rawToken)
+      .digest('hex');
     const resetPasswordExp = new Date(Date.now() + 60 * 60 * 1000);
 
     await this.prisma.user.update({
@@ -197,18 +240,15 @@ export class AuthService {
       data: { resetPasswordToken, resetPasswordExp },
     });
 
-    await this.mail.sendPasswordReset(
-      user.email,
-      user.name,
-      resetPasswordToken,
-    );
+    await this.mail.sendPasswordReset(user.email, user.name, rawToken);
     return msg;
   }
 
   async resetPassword(dto: ResetPasswordDto) {
+    const tokenHash = createHash('sha256').update(dto.token).digest('hex');
     const user = await this.prisma.user.findFirst({
       where: {
-        resetPasswordToken: dto.token,
+        resetPasswordToken: tokenHash,
         resetPasswordExp: { gt: new Date() },
       },
     });
@@ -230,7 +270,11 @@ export class AuthService {
     return { message: 'Senha redefinida com sucesso.' };
   }
 
-  async switchTenant(userId: string, tenantId: string) {
+  async switchTenant(
+    userId: string,
+    tenantId: string,
+    currentRefreshToken: string | undefined,
+  ) {
     const tenantUser = await this.prisma.tenantUser.findUnique({
       where: { tenantId_userId: { tenantId, userId } },
       include: { tenant: true },
@@ -239,6 +283,16 @@ export class AuthService {
     if (!tenantUser) throw new ForbiddenException('Sem acesso a este tenant');
     if (tenantUser.tenant.status !== TenantStatus.active) {
       throw new ForbiddenException('Tenant inativo');
+    }
+
+    if (currentRefreshToken) {
+      const tokenHash = createHash('sha256')
+        .update(currentRefreshToken)
+        .digest('hex');
+      await this.prisma.refreshToken.updateMany({
+        where: { tokenHash, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
     }
 
     return this.mintTokens(userId, tenantId, tenantUser.role);
@@ -253,7 +307,7 @@ export class AuthService {
 
     const rawToken = randomBytes(64).toString('hex');
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
 
     await this.prisma.refreshToken.create({
       data: { userId, tenantId, tokenHash, expiresAt },
@@ -262,21 +316,13 @@ export class AuthService {
     return { accessToken, refreshToken: rawToken };
   }
 
-  private async uniqueSlug(name: string): Promise<string> {
-    const base = name
+  private toSlugBase(name: string): string {
+    return name
       .toLowerCase()
       .normalize('NFD')
       .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .substring(0, 90);
-
-    let slug = base;
-    let attempt = 0;
-    while (await this.prisma.tenant.findUnique({ where: { slug } })) {
-      slug = `${base}-${randomBytes(3).toString('hex')}`;
-      if (++attempt > 10) throw new Error('Não foi possível gerar slug único');
-    }
-    return slug;
   }
 }

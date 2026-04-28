@@ -4,9 +4,10 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
-import { Observable, from, switchMap } from 'rxjs';
+import { Observable } from 'rxjs';
 import { PrismaService } from '../../database/prisma.service';
-import { AuthUser } from '../../auth/strategies/jwt.strategy';
+import { tenantStorage } from '../../database/tenant.context';
+import type { AuthUser } from '../../auth/strategies/jwt.strategy';
 
 @Injectable()
 export class TenantContextInterceptor implements NestInterceptor {
@@ -18,9 +19,27 @@ export class TenantContextInterceptor implements NestInterceptor {
 
     if (!tenantId) return next.handle();
 
-    return from(
+    // Wrap the entire request in a single DB transaction so that:
+    // 1. set_config with is_local=true is guaranteed to apply to all subsequent
+    //    queries (they all share the same connection via the tx client).
+    // 2. There is no cross-request tenant context bleed via the connection pool.
+    return new Observable((observer) => {
       this.prisma
-        .$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, false)`,
-    ).pipe(switchMap(() => next.handle()));
+        .$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`;
+          await new Promise<void>((resolve, reject) => {
+            tenantStorage.run(tx, () => {
+              next.handle().subscribe({
+                next: (v) => observer.next(v),
+                error: (e: unknown) =>
+                  reject(e instanceof Error ? e : new Error(String(e))),
+                complete: () => resolve(),
+              });
+            });
+          });
+        })
+        .then(() => observer.complete())
+        .catch((e: unknown) => observer.error(e));
+    });
   }
 }

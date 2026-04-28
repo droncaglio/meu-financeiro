@@ -13,7 +13,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService, REFRESH_TOKEN_TTL_MS } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -119,11 +119,14 @@ export class AuthController {
   async switchTenant(
     @CurrentUser() user: AuthUser,
     @Body() dto: SwitchTenantDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    const currentToken = req.cookies?.[COOKIE_NAME] as string | undefined;
     const { refreshToken, ...rest } = await this.authService.switchTenant(
       user.userId,
       dto.tenantId,
+      currentToken,
     );
     this.setRefreshCookie(res, refreshToken);
     return rest;
@@ -134,7 +137,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expires: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       path: COOKIE_PATH,
     });
   }

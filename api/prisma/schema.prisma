@@ -45,6 +45,7 @@ model User {
   isSuperUser        Boolean   @default(false) @map("is_super_user")
   emailVerifiedAt    DateTime? @map("email_verified_at") @db.Timestamptz(6)
   emailVerifyToken   String?   @map("email_verify_token") @db.VarChar(255)
+  emailVerifyExp     DateTime? @map("email_verify_exp") @db.Timestamptz(6)
   resetPasswordToken String?   @map("reset_password_token") @db.VarChar(255)
   resetPasswordExp   DateTime? @map("reset_password_exp") @db.Timestamptz(6)
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

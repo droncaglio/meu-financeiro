@@ -1,0 +1,171 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-04-26T00:00:00.000Z",
+  "__export_source": "meu-financeiro",
+  "resources": [
+    {
+      "_id": "wrk_mf001",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "Meu Financeiro API",
+      "description": "API de gestão financeira empresarial",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_mf001",
+      "_type": "environment",
+      "parentId": "wrk_mf001",
+      "name": "Local Dev",
+      "data": {
+        "base_url": "http://localhost:3000/api/v1",
+        "access_token": ""
+      },
+      "color": "#7c3aed",
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_mf001",
+      "name": "Auth",
+      "description": "Registro, login e gerenciamento de sessão"
+    },
+    {
+      "_id": "fld_misc",
+      "_type": "request_group",
+      "parentId": "wrk_mf001",
+      "name": "Misc"
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "parentId": "fld_misc",
+      "name": "Health Check",
+      "method": "GET",
+      "url": "{{ base_url }}/health",
+      "headers": [],
+      "body": {},
+      "authentication": {}
+    },
+    {
+      "_id": "req_register",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "1. Register",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"name\": \"Daniel\",\n\t\"email\": \"daniel@empresa.com\",\n\t\"password\": \"senha@123\",\n\t\"companyName\": \"Minha Empresa Ltda\"\n}"
+      },
+      "authentication": {}
+    },
+    {
+      "_id": "req_verify_email",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "2. Verify Email",
+      "method": "GET",
+      "url": "{{ base_url }}/auth/verify-email?token=COLE_O_TOKEN_DO_LOG_AQUI",
+      "headers": [],
+      "body": {},
+      "authentication": {}
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "3. Login",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/login",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"email\": \"daniel@empresa.com\",\n\t\"password\": \"senha@123\"\n}"
+      },
+      "authentication": {}
+    },
+    {
+      "_id": "req_refresh",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "4. Refresh Token",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/refresh",
+      "headers": [],
+      "body": {},
+      "authentication": {}
+    },
+    {
+      "_id": "req_logout",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "5. Logout",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/logout",
+      "headers": [],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ access_token }}"
+      }
+    },
+    {
+      "_id": "req_forgot_password",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "6. Forgot Password",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/forgot-password",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"email\": \"daniel@empresa.com\"\n}"
+      },
+      "authentication": {}
+    },
+    {
+      "_id": "req_reset_password",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "7. Reset Password",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/reset-password",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"token\": \"COLE_O_TOKEN_DO_LOG_AQUI\",\n\t\"password\": \"novaSenha@456\"\n}"
+      },
+      "authentication": {}
+    },
+    {
+      "_id": "req_switch_tenant",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "8. Switch Tenant",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/switch-tenant",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"tenantId\": \"COLE_O_TENANT_ID_AQUI\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ access_token }}"
+      }
+    }
+  ]
+}

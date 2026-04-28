@@ -7,7 +7,7 @@
 
 ## Visão Geral das Etapas
 
-- [ ] **Step 1** — Setup do Monorepo e Infraestrutura Base
+- [x] **Step 1** — Setup do Monorepo e Infraestrutura Base
 - [ ] **Step 2** — Autenticação (Auth)
 - [ ] **Step 3** — Plano de Contas
 - [ ] **Step 4** — Lançamentos Contábeis

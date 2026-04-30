@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
@@ -13,11 +13,26 @@ import { MailModule } from './mail/mail.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([
-      { name: 'login', ttl: 60_000, limit: 10 },
-      { name: 'register', ttl: 3_600_000, limit: 10 },
-      { name: 'sensitive', ttl: 900_000, limit: 5 },
-    ]),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => [
+        {
+          name: 'login',
+          ttl: cfg.get<number>('THROTTLE_LOGIN_TTL', 60_000),
+          limit: cfg.get<number>('THROTTLE_LOGIN_LIMIT', 20),
+        },
+        {
+          name: 'register',
+          ttl: cfg.get<number>('THROTTLE_REGISTER_TTL', 3_600_000),
+          limit: cfg.get<number>('THROTTLE_REGISTER_LIMIT', 20),
+        },
+        {
+          name: 'sensitive',
+          ttl: cfg.get<number>('THROTTLE_SENSITIVE_TTL', 900_000),
+          limit: cfg.get<number>('THROTTLE_SENSITIVE_LIMIT', 10),
+        },
+      ],
+    }),
     DatabaseModule,
     MailModule,
     AuthModule,

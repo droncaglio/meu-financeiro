@@ -26,7 +26,7 @@ export class MailService implements OnModuleInit {
 
   async sendVerification(to: string, name: string, token: string) {
     const appUrl = this.config.get<string>('APP_URL', 'http://localhost:5173');
-    const link = `${appUrl}/auth/verify-email?token=${token}`;
+    const link = `${appUrl}/verify-email?token=${token}`;
 
     if (this.isDev()) {
       this.logger.log(`[DEV EMAIL] Verificação para ${to} → ${link}`);
@@ -42,7 +42,7 @@ export class MailService implements OnModuleInit {
 
   async sendPasswordReset(to: string, name: string, token: string) {
     const appUrl = this.config.get<string>('APP_URL', 'http://localhost:5173');
-    const link = `${appUrl}/auth/reset-password?token=${token}`;
+    const link = `${appUrl}/reset-password?token=${token}`;
 
     if (this.isDev()) {
       this.logger.log(`[DEV EMAIL] Reset de senha para ${to} → ${link}`);

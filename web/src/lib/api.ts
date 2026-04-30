@@ -32,6 +32,7 @@ api.interceptors.response.use(
         return api(original)
       } catch {
         useAuthStore.getState().logout()
+        window.dispatchEvent(new CustomEvent('auth:session-expired'))
       }
     }
     return Promise.reject(error)

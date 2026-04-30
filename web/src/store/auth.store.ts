@@ -21,9 +21,11 @@ interface AuthState {
   user: User | null
   tenant: Tenant | null
   accessToken: string | null
+  isInitialized: boolean
   setAuth: (user: User, tenant: Tenant, accessToken: string) => void
   setAccessToken: (accessToken: string) => void
   setTenant: (tenant: Tenant) => void
+  setInitialized: () => void
   logout: () => void
 }
 
@@ -33,9 +35,11 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       tenant: null,
       accessToken: null,
+      isInitialized: false,
       setAuth: (user, tenant, accessToken) => set({ user, tenant, accessToken }),
       setAccessToken: (accessToken) => set({ accessToken }),
       setTenant: (tenant) => set({ tenant }),
+      setInitialized: () => set({ isInitialized: true }),
       logout: () => set({ user: null, tenant: null, accessToken: null }),
     }),
     {

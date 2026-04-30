@@ -1,171 +1,360 @@
 {
-  "_type": "export",
-  "__export_format": 4,
-  "__export_date": "2026-04-26T00:00:00.000Z",
-  "__export_source": "meu-financeiro",
-  "resources": [
-    {
-      "_id": "wrk_mf001",
-      "_type": "workspace",
-      "parentId": null,
-      "name": "Meu Financeiro API",
-      "description": "API de gestão financeira empresarial",
-      "scope": "collection"
-    },
-    {
-      "_id": "env_mf001",
-      "_type": "environment",
-      "parentId": "wrk_mf001",
-      "name": "Local Dev",
-      "data": {
-        "base_url": "http://localhost:3000/api/v1",
-        "access_token": ""
-      },
-      "color": "#7c3aed",
-      "isPrivate": false
-    },
-    {
-      "_id": "fld_auth",
-      "_type": "request_group",
-      "parentId": "wrk_mf001",
-      "name": "Auth",
-      "description": "Registro, login e gerenciamento de sessão"
-    },
-    {
-      "_id": "fld_misc",
-      "_type": "request_group",
-      "parentId": "wrk_mf001",
-      "name": "Misc"
-    },
-    {
-      "_id": "req_health",
-      "_type": "request",
-      "parentId": "fld_misc",
-      "name": "Health Check",
-      "method": "GET",
-      "url": "{{ base_url }}/health",
-      "headers": [],
-      "body": {},
-      "authentication": {}
-    },
-    {
-      "_id": "req_register",
-      "_type": "request",
-      "parentId": "fld_auth",
-      "name": "1. Register",
-      "method": "POST",
-      "url": "{{ base_url }}/auth/register",
-      "headers": [
-        { "name": "Content-Type", "value": "application/json" }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"name\": \"Daniel\",\n\t\"email\": \"daniel@empresa.com\",\n\t\"password\": \"senha@123\",\n\t\"companyName\": \"Minha Empresa Ltda\"\n}"
-      },
-      "authentication": {}
-    },
-    {
-      "_id": "req_verify_email",
-      "_type": "request",
-      "parentId": "fld_auth",
-      "name": "2. Verify Email",
-      "method": "GET",
-      "url": "{{ base_url }}/auth/verify-email?token=COLE_O_TOKEN_DO_LOG_AQUI",
-      "headers": [],
-      "body": {},
-      "authentication": {}
-    },
-    {
-      "_id": "req_login",
-      "_type": "request",
-      "parentId": "fld_auth",
-      "name": "3. Login",
-      "method": "POST",
-      "url": "{{ base_url }}/auth/login",
-      "headers": [
-        { "name": "Content-Type", "value": "application/json" }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"email\": \"daniel@empresa.com\",\n\t\"password\": \"senha@123\"\n}"
-      },
-      "authentication": {}
-    },
-    {
-      "_id": "req_refresh",
-      "_type": "request",
-      "parentId": "fld_auth",
-      "name": "4. Refresh Token",
-      "method": "POST",
-      "url": "{{ base_url }}/auth/refresh",
-      "headers": [],
-      "body": {},
-      "authentication": {}
-    },
-    {
-      "_id": "req_logout",
-      "_type": "request",
-      "parentId": "fld_auth",
-      "name": "5. Logout",
-      "method": "POST",
-      "url": "{{ base_url }}/auth/logout",
-      "headers": [],
-      "body": {},
-      "authentication": {
-        "type": "bearer",
-        "token": "{{ access_token }}"
-      }
-    },
-    {
-      "_id": "req_forgot_password",
-      "_type": "request",
-      "parentId": "fld_auth",
-      "name": "6. Forgot Password",
-      "method": "POST",
-      "url": "{{ base_url }}/auth/forgot-password",
-      "headers": [
-        { "name": "Content-Type", "value": "application/json" }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"email\": \"daniel@empresa.com\"\n}"
-      },
-      "authentication": {}
-    },
-    {
-      "_id": "req_reset_password",
-      "_type": "request",
-      "parentId": "fld_auth",
-      "name": "7. Reset Password",
-      "method": "POST",
-      "url": "{{ base_url }}/auth/reset-password",
-      "headers": [
-        { "name": "Content-Type", "value": "application/json" }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"token\": \"COLE_O_TOKEN_DO_LOG_AQUI\",\n\t\"password\": \"novaSenha@456\"\n}"
-      },
-      "authentication": {}
-    },
-    {
-      "_id": "req_switch_tenant",
-      "_type": "request",
-      "parentId": "fld_auth",
-      "name": "8. Switch Tenant",
-      "method": "POST",
-      "url": "{{ base_url }}/auth/switch-tenant",
-      "headers": [
-        { "name": "Content-Type", "value": "application/json" }
-      ],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"tenantId\": \"COLE_O_TENANT_ID_AQUI\"\n}"
-      },
-      "authentication": {
-        "type": "bearer",
-        "token": "{{ access_token }}"
-      }
-    }
-  ]
+    "_type": "export",
+    "__export_format": 4,
+    "__export_date": "2026-04-28T01:22:20.993Z",
+    "__export_source": "insomnia.desktop.app:v2023.5.8",
+    "resources": [
+        {
+            "_id": "req_673de5e61fd44b90a03ba19a5179ef8a",
+            "parentId": "fld_b7cea74b7e954ea6be991f1f98766ae4",
+            "modified": 1777250232399,
+            "created": 1777250232399,
+            "url": "{{ base_url }}/health",
+            "name": "Health Check",
+            "description": "",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {},
+            "metaSortKey": -1777250232399,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "fld_b7cea74b7e954ea6be991f1f98766ae4",
+            "parentId": "wrk_9019f69ad22047f0ab5ed3279b7102bc",
+            "modified": 1777250232399,
+            "created": 1777250232399,
+            "name": "Misc",
+            "description": "",
+            "environment": {},
+            "environmentPropertyOrder": null,
+            "metaSortKey": -1777250232399,
+            "_type": "request_group"
+        },
+        {
+            "_id": "wrk_9019f69ad22047f0ab5ed3279b7102bc",
+            "parentId": null,
+            "modified": 1777250232395,
+            "created": 1777250232395,
+            "name": "Meu Financeiro API",
+            "description": "",
+            "scope": "collection",
+            "_type": "workspace"
+        },
+        {
+            "_id": "req_9ee5fe9b06454a45b797ddaf3182d6a5",
+            "parentId": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "modified": 1777252352033,
+            "created": 1777250232400,
+            "url": "{{ base_url }}/auth/register",
+            "name": "1. Register",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"name\": \"Daniel\",\n\t\"email\": \"daniel@empresa.comm\",\n\t\"password\": \"senha@123\",\n\t\"companyName\": \"Minha Empresa Ltda\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1777250232508,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "parentId": "wrk_9019f69ad22047f0ab5ed3279b7102bc",
+            "modified": 1777250232397,
+            "created": 1777250232397,
+            "name": "Auth",
+            "description": "Registro, login e gerenciamento de sessão",
+            "environment": {},
+            "environmentPropertyOrder": null,
+            "metaSortKey": -1777250232398,
+            "_type": "request_group"
+        },
+        {
+            "_id": "req_5c3fe7e602754a568b824715014dc112",
+            "parentId": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "modified": 1777250938309,
+            "created": 1777250232402,
+            "url": "{{ base_url }}/auth/verify-email?token=8570129e88866012b87e95ab141f2a69a56888e4b4d91f5dcd3ac67fa40e2571",
+            "name": "2. Verify Email",
+            "description": "",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {},
+            "metaSortKey": -1777250232458,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_0859a3d6d81f4a7b84002124f640d366",
+            "parentId": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "modified": 1777251596323,
+            "created": 1777250232403,
+            "url": "{{ base_url }}/auth/login",
+            "name": "3. Login",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"email\": \"daniel@empresa.com\",\n\t\"password\": \"novaSenha@456\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1777250232433,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_79ab98f4c3c1488bbb95ad058017fc53",
+            "parentId": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "modified": 1777250941719,
+            "created": 1777250232404,
+            "url": "{{ base_url }}/auth/refresh",
+            "name": "4. Refresh Token",
+            "description": "",
+            "method": "POST",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {},
+            "metaSortKey": -1777250232420.5,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_d2dfd0622bce49e0b5ddf5a7b38e9919",
+            "parentId": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "modified": 1777251041971,
+            "created": 1777250232405,
+            "url": "{{ base_url }}/auth/logout",
+            "name": "5. Logout",
+            "description": "",
+            "method": "POST",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {
+                "type": "bearer",
+                "token": "{{ access_token }}"
+            },
+            "metaSortKey": -1777250232414.25,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_b3da26a370764f918f13624462f5382e",
+            "parentId": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "modified": 1777250945396,
+            "created": 1777250232406,
+            "url": "{{ base_url }}/auth/forgot-password",
+            "name": "6. Forgot Password",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"email\": \"daniel@empresa.com\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1777250232411.125,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_975666b6884f468187d98556dd58bb94",
+            "parentId": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "modified": 1777251185503,
+            "created": 1777250232407,
+            "url": "{{ base_url }}/auth/reset-password",
+            "name": "7. Reset Password",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"token\": \"30299948ce171f904942636f4c49395786bdbe7c7d1c85d896c697eb3a2c11e5\",\n\t\"password\": \"novaSenha@456\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1777250232409.5625,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_bdcdad920f334647805d47427ec4424e",
+            "parentId": "fld_1e8973515cb543308ddfc7e0c5afb3d7",
+            "modified": 1777250232408,
+            "created": 1777250232408,
+            "url": "{{ base_url }}/auth/switch-tenant",
+            "name": "8. Switch Tenant",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"tenantId\": \"COLE_O_TENANT_ID_AQUI\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {
+                "type": "bearer",
+                "token": "{{ access_token }}"
+            },
+            "metaSortKey": -1777250232408,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "env_4987765338a14880a05058b2da6ab99c",
+            "parentId": "wrk_9019f69ad22047f0ab5ed3279b7102bc",
+            "modified": 1777337743903,
+            "created": 1777250232396,
+            "name": "Local Dev",
+            "data": {
+                "base_url": "http://localhost:3000/api/v1",
+                "access_token": "{% response 'body', 'req_0859a3d6d81f4a7b84002124f640d366', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'never', 60 %}"
+            },
+            "dataPropertyOrder": {
+                "&": [
+                    "base_url",
+                    "access_token"
+                ]
+            },
+            "color": "#7c3aed",
+            "isPrivate": false,
+            "metaSortKey": 1777250232396,
+            "_type": "environment"
+        },
+        {
+            "_id": "jar_956e68e94221f1a5d55ec121d0165d0b344b05fd",
+            "parentId": "wrk_9019f69ad22047f0ab5ed3279b7102bc",
+            "modified": 1777251599341,
+            "created": 1777250238714,
+            "name": "Default Jar",
+            "cookies": [
+                {
+                    "key": "refresh_token",
+                    "value": "d3e9bdb6d8e4c769318b33809019af5f32dd4b0bd076645686f197330aa6bfae1d04c7f0b9f200a447132bbfaf32d150ff722cc545fabf7a1af20a618cb7ad9f",
+                    "expires": "2026-05-04T00:59:59.000Z",
+                    "domain": "localhost",
+                    "path": "/api/v1/auth",
+                    "httpOnly": true,
+                    "hostOnly": true,
+                    "creation": "2026-04-27T00:45:08.577Z",
+                    "lastAccessed": "2026-04-27T00:59:59.341Z",
+                    "sameSite": "strict",
+                    "id": "03466545337199234"
+                }
+            ],
+            "_type": "cookie_jar"
+        },
+        {
+            "_id": "env_25c8200945da4f8eaa45723cdeb44902",
+            "parentId": "env_4987765338a14880a05058b2da6ab99c",
+            "modified": 1777337770285,
+            "created": 1777337745248,
+            "name": "Production",
+            "data": {
+                "base_url": "http://mytestdomain.com.br/api/v1",
+                "access_token": "{% response 'body', 'req_0859a3d6d81f4a7b84002124f640d366', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'never', 60 %}"
+            },
+            "dataPropertyOrder": {
+                "&": [
+                    "base_url",
+                    "access_token"
+                ]
+            },
+            "color": null,
+            "isPrivate": false,
+            "metaSortKey": 1777337745248,
+            "_type": "environment"
+        }
+    ]
 }

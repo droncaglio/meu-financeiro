@@ -1,11 +1,9 @@
 import {
   Body,
   Controller,
-  Get,
   HttpCode,
   HttpStatus,
   Post,
-  Query,
   Req,
   Res,
   UseGuards,
@@ -21,6 +19,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SwitchTenantDto } from './dto/switch-tenant.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import type { AuthUser } from './strategies/jwt.strategy';
 
 const COOKIE_NAME = 'refresh_token';
@@ -41,13 +40,16 @@ export class AuthController {
   }
 
   @Public()
-  @Get('verify-email')
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verificar e-mail via token' })
   async verifyEmail(
-    @Query('token') token: string,
+    @Body() dto: VerifyEmailDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { refreshToken, ...rest } = await this.authService.verifyEmail(token);
+    const { refreshToken, ...rest } = await this.authService.verifyEmail(
+      dto.token,
+    );
     this.setRefreshCookie(res, refreshToken);
     return rest;
   }

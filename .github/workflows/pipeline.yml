@@ -154,6 +154,7 @@ jobs:
             cd ~/meu-financeiro
 
             # Escreve .env a partir dos secrets do GitHub (substitui o arquivo inteiro)
+            rm -f .env
             {
               printf 'POSTGRES_DB=%s\n'       "$POSTGRES_DB"
               printf 'POSTGRES_USER=%s\n'     "$POSTGRES_USER"

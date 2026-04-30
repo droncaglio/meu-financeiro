@@ -131,14 +131,48 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ACTOR: ${{ github.actor }}
           OWNER: ${{ github.repository_owner }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          APP_PEPPER: ${{ secrets.APP_PEPPER }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          APP_URL: ${{ secrets.APP_URL }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: GHCR_TOKEN,IMAGE_TAG,ACTOR,OWNER
+          envs: GHCR_TOKEN,IMAGE_TAG,ACTOR,OWNER,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,DATABASE_URL,JWT_SECRET,JWT_REFRESH_SECRET,APP_PEPPER,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,APP_URL
           script: |
             set -e
             cd ~/meu-financeiro
+
+            # Escreve .env a partir dos secrets do GitHub (substitui o arquivo inteiro)
+            {
+              printf 'POSTGRES_DB=%s\n'       "$POSTGRES_DB"
+              printf 'POSTGRES_USER=%s\n'     "$POSTGRES_USER"
+              printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD"
+              printf 'DATABASE_URL=%s\n'      "$DATABASE_URL"
+              printf 'JWT_SECRET=%s\n'        "$JWT_SECRET"
+              printf 'JWT_REFRESH_SECRET=%s\n' "$JWT_REFRESH_SECRET"
+              printf 'APP_PEPPER=%s\n'        "$APP_PEPPER"
+              printf 'SMTP_HOST=%s\n'         "$SMTP_HOST"
+              printf 'SMTP_PORT=%s\n'         "$SMTP_PORT"
+              printf 'SMTP_USER=%s\n'         "$SMTP_USER"
+              printf 'SMTP_PASS=%s\n'         "$SMTP_PASS"
+              printf 'SMTP_FROM=%s\n'         "$SMTP_FROM"
+              printf 'APP_URL=%s\n'          "$APP_URL"
+              printf 'PORT=3000\n'
+              printf 'NODE_ENV=production\n'
+            } > .env
+            chmod 600 .env
+
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
             export GHCR_IMAGE_API=ghcr.io/$OWNER/meu-financeiro-api:$IMAGE_TAG
             export GHCR_IMAGE_WEB=ghcr.io/$OWNER/meu-financeiro-web:$IMAGE_TAG

@@ -13,9 +13,9 @@
 | RF-01.1 | O usuário deve conseguir criar uma conta com e-mail e senha |
 | RF-01.2 | Após o cadastro, um **e-mail de confirmação** é enviado — o acesso só é liberado após clicar no link de confirmação |
 | RF-01.3 | O usuário deve conseguir fazer login e logout |
-| RF-01.4 | Na criação da conta, um **tenant** (organização/empresa) é criado automaticamente e o usuário torna-se Admin |
-| RF-01.5 | Um Admin pode convidar outros usuários para o tenant via e-mail |
-| RF-01.6 | Roles por tenant: **Admin** (acesso total), **Financeiro** (lançamentos + relatórios), **Visualizador** (somente leitura) |
+| RF-01.4 | Na criação da conta, um **tenant** (organização/empresa) é criado automaticamente e o usuário torna-se **Owner** do tenant |
+| RF-01.5 | Um usuário com permissão `users:manage` pode convidar outros usuários para o tenant via e-mail |
+| RF-01.6 | O sistema usa **RBAC customizável por tenant**: cada tenant pode criar seus próprios roles e definir quais permissões cada role tem |
 | RF-01.7 | Um usuário pode pertencer a múltiplos tenants e alternar entre eles |
 | RF-01.8 | Sessão expira após inatividade configurável |
 | RF-01.9 | Recuperação de senha por e-mail |
@@ -23,6 +23,18 @@
 | RF-01.11 | O Super User pode visualizar e operar qualquer tenant sem precisar ser convidado |
 | RF-01.12 | Ações do Super User dentro de um tenant são registradas no audit log com identificação clara ("acesso via suporte") |
 | RF-01.13 | Super Users são criados apenas via acesso direto ao sistema (não há fluxo de cadastro público para esse papel) |
+
+#### RF-01 — RBAC: Roles e Permissões
+
+| ID | Requisito |
+|---|---|
+| RF-01.14 | Ao criar um tenant, o sistema cria automaticamente o role **Owner** para aquele tenant — com todas as permissões e marcado como sistema (não pode ser excluído ou modificado) |
+| RF-01.15 | O Owner pode criar roles customizados para o tenant, atribuindo qualquer subconjunto das permissões disponíveis |
+| RF-01.16 | Um usuário tem exatamente um role por tenant |
+| RF-01.17 | Permissões são granulares por módulo e ação — a tabela completa está em RN-11 |
+| RF-01.18 | Roles customizados podem ser renomeados, editados e excluídos pelo Owner, desde que não haja usuários vinculados ao role no momento da exclusão |
+| RF-01.19 | O convite de usuário deve incluir o role que será atribuído ao usuário ao aceitar |
+| RF-01.20 | Um usuário com `users:manage` pode reatribuir o role de qualquer usuário do tenant, exceto do próprio Owner |
 
 ---
 
@@ -223,12 +235,39 @@
 - Os problemas que exigem ajuste de saldo no Excel (contrapartida esquecida, link quebrado) são estruturalmente impossíveis neste sistema por conta da obrigatoriedade de partidas dobradas
 
 ### RN-09 — Isolamento de Tenant
+
 - Nenhum dado de um tenant é visível ou acessível por outro tenant, em nenhuma circunstância
 - Isso inclui plano de contas, lançamentos, compromissos, relatórios e configurações
 
 ### RN-10 — Plano de Contas Vinculado ao Tenant
 - Cada tenant tem seu próprio plano de contas independente
 - Mudanças no plano de um tenant não afetam outros
+
+### RN-11 — Tabela de Permissões
+
+Cada permissão tem o formato `recurso:ação`. Um role pode ter qualquer subconjunto delas.
+
+| Permissão | Descrição |
+|---|---|
+| `accounts:read` | Ver plano de contas |
+| `accounts:write` | Criar, editar e inativar contas contábeis |
+| `entries:read` | Ver lançamentos e razão de conta |
+| `entries:write` | Criar lançamentos |
+| `entries:delete` | Estornar lançamentos |
+| `commitments:read` | Ver contas a pagar / a receber |
+| `commitments:write` | Criar e editar compromissos |
+| `commitments:delete` | Cancelar compromissos |
+| `reports:read` | Ver todos os relatórios (BP, DRE, BV, IEF, PE, Dashboard) |
+| `bank_accounts:read` | Ver contas bancárias |
+| `bank_accounts:write` | Criar e editar contas bancárias |
+| `imports:run` | Fazer upload e processar extrato bancário |
+| `imports:confirm` | Confirmar ou rejeitar lançamentos sugeridos pelo LLM |
+| `users:manage` | Convidar, remover e reatribuir roles de usuários |
+| `roles:manage` | Criar, editar e excluir roles customizados |
+| `settings:manage` | Configurar metas, ponto de equilíbrio e configurações gerais do tenant |
+
+> **Owner** tem todas as 16 permissões acima e não pode ter nenhuma removida.
+> **Super User** (global) bypassa o RBAC — acessa qualquer tenant com qualquer operação.
 
 ---
 

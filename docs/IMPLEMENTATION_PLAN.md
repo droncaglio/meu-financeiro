@@ -56,7 +56,9 @@
 - [ ] Criar `prisma/schema.prisma` com provider `postgresql` e `uuid` como default
 - [ ] Modelar tabela `tenants` (id, name, slug, status, timestamps)
 - [ ] Modelar tabela `users` (id, email, password_hash, name, is_super_user, email_verified_at, tokens, timestamps)
-- [ ] Modelar tabela `tenant_users` (id, tenant_id, user_id, role, joined_at — UNIQUE tenant+user)
+- [ ] Modelar tabela `roles` (id, tenant_id, name, description, is_system, timestamps)
+- [ ] Modelar tabela `role_permissions` (id, role_id, permission — UNIQUE role+permission)
+- [ ] Modelar tabela `tenant_users` (id, tenant_id, user_id, role_id, joined_at — UNIQUE tenant+user)
 - [ ] Modelar tabela `refresh_tokens` (id, user_id, tenant_id, token_hash, expires_at, revoked_at)
 - [ ] Modelar tabela `audit_logs` (id, tenant_id, user_id, is_super_user, action, entity, entity_id, payload Json, ip, created_at)
 - [ ] Rodar `npx prisma migrate dev --name init`
@@ -95,11 +97,13 @@
 - [ ] Implementar envio de e-mail de confirmação (nodemailer ou provider SMTP)
 - [ ] Criar `JwtStrategy` (passport) para validar access token
 - [ ] Criar `JwtAuthGuard` para proteger rotas
-- [ ] Criar `RolesGuard` para verificar role dentro do tenant
+- [ ] Criar `PermissionsGuard` — carrega permissões do role do usuário no tenant e valida contra `@RequiresPermission()`
 - [ ] Criar `SuperUserGuard` para rotas de admin do sistema
-- [ ] Criar decorators: `@CurrentUser()`, `@CurrentTenant()`, `@Roles()`
+- [ ] Criar decorators: `@CurrentUser()`, `@CurrentTenant()`, `@RequiresPermission('recurso:ação')`, `@SuperUser()`
 - [ ] Implementar `TenantContextInterceptor` — seta `SET LOCAL app.current_tenant_id` antes de cada query
 - [ ] Criar `AuthController` com todos os endpoints (POST /register, GET /verify-email, POST /login, POST /refresh, POST /logout, POST /forgot-password, POST /reset-password, POST /switch-tenant)
+- [ ] Ao criar tenant (em `verifyEmail`): criar role **owner** (`is_system=true`) com todas as 16 permissões e vincular o usuário a esse role
+- [ ] Adicionar tabelas `roles` e `role_permissions` ao schema Prisma e rodar migration
 - [ ] Testar todos os endpoints no Swagger
 
 ### Frontend (React)
@@ -259,7 +263,15 @@
 ## Step 9 — Onboarding e Configurações
 
 ### Backend
-- [ ] Criar módulo `tenants` completo (CRUD de usuários, convites, roles)
+- [ ] Criar módulo `tenants` completo (CRUD de usuários, convites, gestão de roles e permissões)
+  - [ ] `GET /tenants/me/users` — listar usuários do tenant com role
+  - [ ] `POST /tenants/me/users/invite` — convidar usuário (e-mail + role_id)
+  - [ ] `PATCH /tenants/me/users/:userId/role` — reatribuir role (requer `users:manage`)
+  - [ ] `DELETE /tenants/me/users/:userId` — remover usuário do tenant
+  - [ ] `GET /tenants/me/roles` — listar roles do tenant com permissões
+  - [ ] `POST /tenants/me/roles` — criar role customizado (requer `roles:manage`)
+  - [ ] `PATCH /tenants/me/roles/:roleId` — editar nome/permissões de role (requer `roles:manage`, proibido em is_system)
+  - [ ] `DELETE /tenants/me/roles/:roleId` — excluir role (requer `roles:manage`, proibido em is_system ou com usuários vinculados)
 - [ ] Criar módulo `bank-accounts` (CRUD + criação automática no plano de contas)
 - [ ] Criar módulo `goals` (metas e previsões para DRE)
 - [ ] Criar módulo `breakeven-config`
@@ -268,7 +280,16 @@
 ### Frontend
 - [ ] Criar fluxo de onboarding em 3 passos (contas bancárias → saldos iniciais → pronto)
 - [ ] Criar `pages/settings/BankAccountsPage.tsx`
-- [ ] Criar `pages/settings/UsersPage.tsx` (convite, roles)
+- [ ] Criar `pages/settings/UsersPage.tsx`:
+  - [ ] Lista de usuários com nome, e-mail e role
+  - [ ] Botão convidar — modal com campo e-mail + seletor de role
+  - [ ] Inline selector para reatribuir role (com confirmação)
+  - [ ] Botão remover usuário (com confirmação)
+- [ ] Criar `pages/settings/RolesPage.tsx`:
+  - [ ] Lista de roles com quantidade de usuários vinculados
+  - [ ] Badge "Sistema" no role Owner
+  - [ ] Criar/editar role via drawer com checkboxes agrupados por módulo
+  - [ ] Excluir role (desabilitado se is_system ou com usuários vinculados)
 - [ ] Criar `pages/settings/GoalsPage.tsx` (metas mensais por conta)
 - [ ] Criar `pages/settings/BreakevenConfigPage.tsx`
 

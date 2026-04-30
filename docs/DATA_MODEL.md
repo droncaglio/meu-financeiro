@@ -8,7 +8,11 @@
 ## 1. Diagrama de Entidades (ERD simplificado)
 
 ```
+tenants ──< roles (roles do tenant)
 tenants ──< users (via tenant_users)
+roles   ──< role_permissions
+roles   ──< tenant_users
+
 tenants ──< accounts (plano de contas)
 tenants ──< entries (lançamentos)
 tenants ──< commitments (contas a pagar/receber)
@@ -72,16 +76,60 @@ CREATE TABLE users (
 
 ---
 
-### 2.3 `tenant_users`
-Relacionamento N:N entre usuários e tenants com role por tenant.
+### 2.3 `roles`
+Roles por tenant. O role **owner** é criado automaticamente na criação do tenant e marcado como sistema.
+
+```sql
+CREATE TABLE roles (
+  id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID         NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  name        VARCHAR(100) NOT NULL,
+  description VARCHAR(255),
+  is_system   BOOLEAN      NOT NULL DEFAULT false,  -- true = owner (imutável, indeletável)
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+
+  UNIQUE (tenant_id, name)
+);
+
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON roles
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+```
+
+---
+
+### 2.4 `role_permissions`
+Permissões atribuídas a cada role. Cada linha representa uma permissão no formato `recurso:ação`.
+
+Permissões válidas: `accounts:read`, `accounts:write`, `entries:read`, `entries:write`, `entries:delete`,
+`commitments:read`, `commitments:write`, `commitments:delete`, `reports:read`,
+`bank_accounts:read`, `bank_accounts:write`, `imports:run`, `imports:confirm`,
+`users:manage`, `roles:manage`, `settings:manage`.
+
+```sql
+CREATE TABLE role_permissions (
+  id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  role_id    UUID         NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  permission VARCHAR(100) NOT NULL,
+
+  UNIQUE (role_id, permission)
+);
+```
+
+> `role_permissions` não tem RLS própria — o acesso é controlado pelo join com `roles`, que já tem RLS.
+
+---
+
+### 2.5 `tenant_users`
+Vínculo N:N entre usuários e tenants. Cada vínculo tem exatamente um role.
 
 ```sql
 CREATE TABLE tenant_users (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id   UUID        NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   user_id     UUID        NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
-  role        VARCHAR(20) NOT NULL DEFAULT 'viewer',
-                          -- admin | financial | viewer
+  role_id     UUID        NOT NULL REFERENCES roles(id),
   invited_by  UUID        REFERENCES users(id),
   joined_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -92,7 +140,7 @@ CREATE TABLE tenant_users (
 
 ---
 
-### 2.4 `refresh_tokens`
+### 2.6 `refresh_tokens`
 Refresh tokens para renovação de sessão.
 
 ```sql
@@ -109,7 +157,7 @@ CREATE TABLE refresh_tokens (
 
 ---
 
-### 2.5 `audit_logs`
+### 2.7 `audit_logs`
 Registro imutável de ações sensíveis. Sem RLS — Super User sempre tem acesso.
 
 ```sql
@@ -129,7 +177,7 @@ CREATE TABLE audit_logs (
 
 ---
 
-### 2.6 `accounts` (Plano de Contas)
+### 2.8 `accounts` (Plano de Contas)
 Estrutura hierárquica de contas contábeis. Uma das tabelas centrais.
 
 ```sql
@@ -188,7 +236,7 @@ CREATE POLICY tenant_isolation ON accounts
 
 ---
 
-### 2.7 `entries` (Lançamentos)
+### 2.9 `entries` (Lançamentos)
 Cabeçalho do lançamento. Cada lançamento tem exatamente duas linhas em `entry_lines`.
 
 ```sql
@@ -231,7 +279,7 @@ CREATE POLICY tenant_isolation ON entries
 
 ---
 
-### 2.8 `entry_lines` (Linhas do Lançamento)
+### 2.10 `entry_lines` (Linhas do Lançamento)
 Sempre exatamente 2 linhas por `entry_id`: uma de débito e uma de crédito.
 
 ```sql
@@ -266,7 +314,7 @@ CREATE POLICY tenant_isolation ON entry_lines
 
 ---
 
-### 2.9 `entry_recurrences` (Séries Recorrentes)
+### 2.11 `entry_recurrences` (Séries Recorrentes)
 Controla lançamentos recorrentes. Cada instância aponta para esta tabela.
 
 ```sql
@@ -303,7 +351,7 @@ CREATE POLICY tenant_isolation ON entry_recurrences
 
 ---
 
-### 2.10 `bank_accounts` (Contas Bancárias)
+### 2.12 `bank_accounts` (Contas Bancárias)
 Contas bancárias e carteiras do tenant. Cada uma vinculada a uma conta no plano de contas.
 
 ```sql
@@ -338,7 +386,7 @@ CREATE POLICY tenant_isolation ON bank_accounts
 
 ---
 
-### 2.11 `commitments` (Contas a Pagar / A Receber)
+### 2.13 `commitments` (Contas a Pagar / A Receber)
 
 ```sql
 CREATE TYPE commitment_type AS ENUM ('payable', 'receivable');
@@ -394,7 +442,7 @@ CREATE POLICY tenant_isolation ON commitments
 
 ---
 
-### 2.12 `commitment_recurrences` (Séries de Compromissos Recorrentes)
+### 2.14 `commitment_recurrences` (Séries de Compromissos Recorrentes)
 
 ```sql
 CREATE TABLE commitment_recurrences (
@@ -425,7 +473,7 @@ CREATE POLICY tenant_isolation ON commitment_recurrences
 
 ---
 
-### 2.13 `goals` (Metas e Previsões para DRE)
+### 2.15 `goals` (Metas e Previsões para DRE)
 Metas e previsões mensais por conta. Usadas nas colunas "Meta" e "Previsão" da DRE.
 
 ```sql
@@ -452,7 +500,7 @@ CREATE POLICY tenant_isolation ON goals
 
 ---
 
-### 2.14 `breakeven_config` (Configuração do Ponto de Equilíbrio)
+### 2.16 `breakeven_config` (Configuração do Ponto de Equilíbrio)
 Configuração de margem de contribuição meta e resultado desejado por mês.
 
 ```sql
@@ -476,7 +524,7 @@ CREATE POLICY tenant_isolation ON breakeven_config
 
 ---
 
-### 2.15 `import_batches` (Importações de Extrato)
+### 2.17 `import_batches` (Importações de Extrato)
 Controla cada importação de extrato bancário e seu estado de revisão.
 
 ```sql
@@ -730,7 +778,9 @@ GROUP BY el.tenant_id, el.account_id, a.nature, DATE_TRUNC('month', e.date);
 |---|---|---|---|
 | tenants | Não | — | Organizações |
 | users | Não | — | Usuários globais |
-| tenant_users | Não | Sim | Vínculo usuário-tenant com role |
+| roles | Sim | Sim | Roles por tenant (inclui owner do sistema) |
+| role_permissions | Não* | — | Permissões por role (acesso via join com roles) |
+| tenant_users | Não | Sim | Vínculo usuário-tenant com role_id |
 | refresh_tokens | Não | Sim | Sessões |
 | audit_logs | Não | Sim | Log imutável |
 | accounts | Sim | Sim | Plano de contas |
@@ -744,6 +794,8 @@ GROUP BY el.tenant_id, el.account_id, a.nature, DATE_TRUNC('month', e.date);
 | breakeven_config | Sim | Sim | Configuração do PE |
 | import_batches | Sim | Sim | Importações de extrato (cabeçalho) |
 | import_lines | Sim | Sim | Linhas de importação com sugestão LLM |
+
+> \* `role_permissions` não tem RLS própria — o isolamento é garantido pelo FK para `roles`, que tem RLS habilitada.
 
 ---
 

@@ -134,8 +134,8 @@ meu-financeiro/
 │   │   │   ├── imports/            # Importação de extratos + LLM
 │   │   │   └── goals/              # Metas e previsões (DRE)
 │   │   ├── common/
-│   │   │   ├── decorators/         # @CurrentTenant, @CurrentUser, @SuperUser
-│   │   │   ├── guards/             # JwtGuard, RolesGuard, SuperUserGuard
+│   │   │   ├── decorators/         # @CurrentTenant, @CurrentUser, @RequiresPermission, @SuperUser
+│   │   │   ├── guards/             # JwtGuard, PermissionsGuard, SuperUserGuard
 │   │   │   ├── filters/            # Exception filters globais
 │   │   │   └── interceptors/       # TenantContext, AuditLog
 │   │   ├── database/
@@ -183,7 +183,7 @@ meu-financeiro/
 | Módulo | Responsabilidade |
 |---|---|
 | **auth** | Cadastro, confirmação de email, login, refresh token, recuperação de senha |
-| **tenants** | CRUD de tenants, convite de usuários, gestão de roles, acesso Super User |
+| **tenants** | CRUD de tenants, convite de usuários, gestão de roles e permissões, acesso Super User |
 | **chart-of-accounts** | CRUD do plano de contas, validação de hierarquia, seed do plano padrão |
 | **entries** | Lançamentos com estorno automático, recorrência, razão da conta, saldo inicial |
 | **commitments** | Contas a pagar/receber, fluxo de pagamento, recorrência, alertas de vencimento |
@@ -216,9 +216,11 @@ meu-financeiro/
 
 5. Toda requisição autenticada:
    → Header: Authorization: Bearer <access_token>
-   → JwtGuard extrai user + tenant_id
+   → JwtGuard extrai user_id + tenant_id
    → TenantInterceptor seta app.current_tenant_id no PostgreSQL
    → RLS filtra automaticamente todos os dados
+   → PermissionsGuard carrega as permissões do role do usuário naquele tenant
+     e valida contra o @RequiresPermission() declarado no controller
 ```
 
 ---
@@ -257,6 +259,7 @@ saldo_sintético(conta_pai) =
 | ADR-07 | API REST única para web e mobile | BFF separado por cliente | YAGNI — contratos idênticos por enquanto |
 | ADR-08 | shadcn/ui + Tailwind | MUI / Ant Design | Sem lock-in de estilo, componentes acessíveis, customização total |
 | ADR-09 | Claude (Anthropic) para categorização de extratos | GPT-4 / regras manuais | Qualidade superior em português, SDK disponível |
+| ADR-10 | RBAC customizável por tenant (roles + permissions em banco) | Roles fixos (enum) | Tenants têm estruturas organizacionais diferentes; roles fixos exigiriam refactor ao primeiro pedido de customização |
 
 ---
 

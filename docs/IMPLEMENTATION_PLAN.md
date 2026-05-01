@@ -3,6 +3,16 @@
 > Checklist completo de implementação por etapa.
 > Marcar cada item com `[x]` conforme concluído.
 
+## Diretriz de Testes
+
+**Regra:** Toda feature nova deve incluir testes antes de ser considerada concluída.
+
+- **Unit tests** (obrigatórios): cada service, guard, strategy e decorator com mocks completos
+- **E2E tests** (obrigatórios para flows críticos): auth, lançamentos, relatórios
+- Nenhum step é marcado `[x]` sem cobertura de testes correspondente
+- Testes ficam em `*.spec.ts` ao lado do arquivo de produção
+- Para novos endpoints: ao menos casos de sucesso + casos de erro principais
+
 ---
 
 ## Visão Geral das Etapas

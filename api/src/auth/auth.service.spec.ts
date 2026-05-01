@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -42,7 +49,12 @@ const mockLoginUser = {
       roleId: 'role-1',
       joinedAt: NOW,
       role: { id: 'role-1', name: 'Owner' },
-      tenant: { id: 'tenant-1', name: 'Acme', slug: 'acme', status: TenantStatus.active },
+      tenant: {
+        id: 'tenant-1',
+        name: 'Acme',
+        slug: 'acme',
+        status: TenantStatus.active,
+      },
     },
   ],
 };
@@ -64,11 +76,17 @@ function buildMockTx() {
   return {
     $executeRaw: jest.fn().mockResolvedValue(undefined),
     user: {
-      create: jest.fn().mockResolvedValue({ id: 'user-1', email: 'daniel@acme.com', name: 'Daniel' }),
+      create: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        email: 'daniel@acme.com',
+        name: 'Daniel',
+      }),
       findUniqueOrThrow: jest.fn().mockResolvedValue(mockUserSuperStatus),
     },
     tenant: {
-      create: jest.fn().mockResolvedValue({ id: 'tenant-1', name: 'Acme', slug: 'acme' }),
+      create: jest
+        .fn()
+        .mockResolvedValue({ id: 'tenant-1', name: 'Acme', slug: 'acme' }),
     },
     role: {
       create: jest.fn().mockResolvedValue({ id: 'role-1', name: 'Owner' }),
@@ -156,7 +174,12 @@ describe('AuthService', () => {
   // -------------------------------------------------------------------------
 
   describe('register', () => {
-    const dto = { name: 'Daniel', email: 'daniel@acme.com', password: 'secret123', companyName: 'Acme' };
+    const dto = {
+      name: 'Daniel',
+      email: 'daniel@acme.com',
+      password: 'secret123',
+      companyName: 'Acme',
+    };
 
     it('returns success message and sends verification email', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
@@ -166,7 +189,9 @@ describe('AuthService', () => {
       expect(result.message).toMatch(/Verifique seu e-mail/);
       expect(mockMail.sendVerification).toHaveBeenCalledTimes(1);
       expect(mockTx.user.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ email: dto.email }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ email: dto.email }),
+        }),
       );
       expect(mockTx.role.create).toHaveBeenCalledTimes(1);
       expect(mockTx.tenantUser.create).toHaveBeenCalledTimes(1);
@@ -182,13 +207,18 @@ describe('AuthService', () => {
     it('retries slug on P2002 and succeeds on second attempt', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      const p2002 = new Prisma.PrismaClientKnownRequestError('Unique constraint', {
-        code: 'P2002',
-        clientVersion: '7.0',
+      const p2002 = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint',
+        {
+          code: 'P2002',
+          clientVersion: '7.0',
+        },
+      );
+      mockTx.tenant.create.mockRejectedValueOnce(p2002).mockResolvedValueOnce({
+        id: 'tenant-2',
+        name: 'Acme',
+        slug: 'acme-abc123',
       });
-      mockTx.tenant.create
-        .mockRejectedValueOnce(p2002)
-        .mockResolvedValueOnce({ id: 'tenant-2', name: 'Acme', slug: 'acme-abc123' });
 
       const result = await service.register(dto);
 
@@ -199,13 +229,18 @@ describe('AuthService', () => {
     it('throws InternalServerErrorException when all 5 slug attempts fail', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      const p2002 = new Prisma.PrismaClientKnownRequestError('Unique constraint', {
-        code: 'P2002',
-        clientVersion: '7.0',
-      });
+      const p2002 = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint',
+        {
+          code: 'P2002',
+          clientVersion: '7.0',
+        },
+      );
       mockTx.tenant.create.mockRejectedValue(p2002);
 
-      await expect(service.register(dto)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.register(dto)).rejects.toThrow(
+        InternalServerErrorException,
+      );
       expect(mockTx.tenant.create).toHaveBeenCalledTimes(5);
     });
 
@@ -230,7 +265,9 @@ describe('AuthService', () => {
     const userWithTenantUser = {
       ...mockUser,
       emailVerifiedAt: null,
-      tenantUsers: [{ tenantId: 'tenant-1', userId: 'user-1', roleId: 'role-1' }],
+      tenantUsers: [
+        { tenantId: 'tenant-1', userId: 'user-1', roleId: 'role-1' },
+      ],
     };
 
     it('returns token pair on success', async () => {
@@ -238,7 +275,10 @@ describe('AuthService', () => {
 
       const result = await service.verifyEmail(token);
 
-      expect(result).toEqual({ accessToken: 'signed-access-token', refreshToken: expect.any(String) });
+      expect(result).toEqual({
+        accessToken: 'signed-access-token',
+        refreshToken: expect.any(String),
+      });
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'user-1' },
@@ -251,7 +291,9 @@ describe('AuthService', () => {
     it('throws NotFoundException for invalid or expired token', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.verifyEmail(token)).rejects.toThrow(NotFoundException);
+      await expect(service.verifyEmail(token)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws BadRequestException when email is already verified', async () => {
@@ -260,7 +302,9 @@ describe('AuthService', () => {
         emailVerifiedAt: NOW,
       } as any);
 
-      await expect(service.verifyEmail(token)).rejects.toThrow(BadRequestException);
+      await expect(service.verifyEmail(token)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws InternalServerErrorException when tenantUsers array is empty', async () => {
@@ -270,14 +314,18 @@ describe('AuthService', () => {
         tenantUsers: [],
       } as any);
 
-      await expect(service.verifyEmail(token)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.verifyEmail(token)).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
 
     it('throws InternalServerErrorException when loadTokenContext returns null', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(userWithTenantUser as any);
       mockTx.tenantUser.findUnique.mockResolvedValue(null);
 
-      await expect(service.verifyEmail(token)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.verifyEmail(token)).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -296,7 +344,11 @@ describe('AuthService', () => {
 
       expect(result.accessToken).toBe('signed-access-token');
       expect(result.refreshToken).toEqual(expect.any(String));
-      expect(result.user).toEqual({ id: 'user-1', name: 'Daniel', email: 'daniel@acme.com' });
+      expect(result.user).toEqual({
+        id: 'user-1',
+        name: 'Daniel',
+        email: 'daniel@acme.com',
+      });
       expect(result.tenant).toEqual(
         expect.objectContaining({ id: 'tenant-1', name: 'Acme', slug: 'acme' }),
       );
@@ -332,7 +384,10 @@ describe('AuthService', () => {
         tenantUsers: [
           {
             ...mockLoginUser.tenantUsers[0],
-            tenant: { ...mockLoginUser.tenantUsers[0].tenant, status: TenantStatus.inactive },
+            tenant: {
+              ...mockLoginUser.tenantUsers[0].tenant,
+              status: TenantStatus.inactive,
+            },
           },
         ],
       } as any);
@@ -356,7 +411,9 @@ describe('AuthService', () => {
 
   describe('refresh', () => {
     it('rotates tokens on success', async () => {
-      mockPrisma.refreshToken.findUnique.mockResolvedValue(mockRefreshTokenRecord as any);
+      mockPrisma.refreshToken.findUnique.mockResolvedValue(
+        mockRefreshTokenRecord as any,
+      );
 
       const result = await service.refresh('raw-refresh-token');
 
@@ -369,13 +426,17 @@ describe('AuthService', () => {
     });
 
     it('throws UnauthorizedException when token is undefined', async () => {
-      await expect(service.refresh(undefined)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh(undefined)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('throws UnauthorizedException when token record is not found', async () => {
       mockPrisma.refreshToken.findUnique.mockResolvedValue(null);
 
-      await expect(service.refresh('raw-refresh-token')).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh('raw-refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('throws UnauthorizedException when token is revoked', async () => {
@@ -384,7 +445,9 @@ describe('AuthService', () => {
         revokedAt: NOW,
       } as any);
 
-      await expect(service.refresh('raw-refresh-token')).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh('raw-refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('throws UnauthorizedException when token is expired', async () => {
@@ -393,17 +456,23 @@ describe('AuthService', () => {
         expiresAt: new Date(Date.now() - 1000),
       } as any);
 
-      await expect(service.refresh('raw-refresh-token')).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh('raw-refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('throws UnauthorizedException when tenant becomes inactive after rotation', async () => {
-      mockPrisma.refreshToken.findUnique.mockResolvedValue(mockRefreshTokenRecord as any);
+      mockPrisma.refreshToken.findUnique.mockResolvedValue(
+        mockRefreshTokenRecord as any,
+      );
       mockTx.tenantUser.findUnique.mockResolvedValue({
         ...mockTenantUserRecord,
         tenant: { status: TenantStatus.inactive },
       } as any);
 
-      await expect(service.refresh('raw-refresh-token')).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh('raw-refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -469,7 +538,9 @@ describe('AuthService', () => {
       expect(rawToken).not.toBe(storedHash);
 
       // SHA-256 of the raw token must equal the stored hash
-      expect(createHash('sha256').update(rawToken).digest('hex')).toBe(storedHash);
+      expect(createHash('sha256').update(rawToken).digest('hex')).toBe(
+        storedHash,
+      );
     });
   });
 
@@ -521,7 +592,9 @@ describe('AuthService', () => {
     it('throws BadRequestException for invalid or expired token', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.resetPassword(dto)).rejects.toThrow(BadRequestException);
+      await expect(service.resetPassword(dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -531,7 +604,11 @@ describe('AuthService', () => {
 
   describe('switchTenant', () => {
     it('revokes old refresh token and returns new token pair on success', async () => {
-      const result = await service.switchTenant('user-1', 'tenant-1', 'old-refresh-token');
+      const result = await service.switchTenant(
+        'user-1',
+        'tenant-1',
+        'old-refresh-token',
+      );
 
       expect(result.accessToken).toBe('signed-access-token');
       expect(result.refreshToken).toEqual(expect.any(String));
@@ -549,9 +626,9 @@ describe('AuthService', () => {
     it('throws ForbiddenException when user has no access to the target tenant', async () => {
       mockTx.tenantUser.findUnique.mockResolvedValue(null);
 
-      await expect(service.switchTenant('user-1', 'tenant-2', undefined)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.switchTenant('user-1', 'tenant-2', undefined),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws ForbiddenException when target tenant is inactive', async () => {
@@ -560,9 +637,9 @@ describe('AuthService', () => {
         tenant: { status: TenantStatus.inactive },
       } as any);
 
-      await expect(service.switchTenant('user-1', 'tenant-1', undefined)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.switchTenant('user-1', 'tenant-1', undefined),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

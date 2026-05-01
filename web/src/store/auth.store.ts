@@ -8,13 +8,12 @@ interface User {
   isSuperUser: boolean
 }
 
-type TenantRole = 'admin' | 'financial' | 'viewer'
-
 interface Tenant {
   id: string
   name: string
   slug: string
-  role: TenantRole
+  roleId: string
+  roleName: string
 }
 
 interface AuthState {

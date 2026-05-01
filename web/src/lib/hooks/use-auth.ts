@@ -4,8 +4,6 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth.store'
 
-type TenantRole = 'admin' | 'financial' | 'viewer'
-
 interface AuthUser {
   id: string
   name: string
@@ -16,7 +14,8 @@ export interface AuthTenant {
   id: string
   name: string
   slug: string
-  role: TenantRole
+  roleId: string
+  roleName: string
 }
 
 export interface LoginResponse {
@@ -65,10 +64,7 @@ export function useVerifyEmail() {
   return useMutation({
     mutationFn: (token: string) =>
       api
-        .post<{ accessToken: string; user: AuthUser; tenant: AuthTenant }>(
-          '/auth/verify-email',
-          { token },
-        )
+        .post<LoginResponse>('/auth/verify-email', { token })
         .then((r) => r.data),
     onSuccess: (data) => {
       setAuth({ ...data.user, isSuperUser: false }, data.tenant, data.accessToken)

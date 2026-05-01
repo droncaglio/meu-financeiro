@@ -24,11 +24,6 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Admin',
-  financial: 'Financeiro',
-  viewer: 'Visualizador',
-}
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -147,7 +142,7 @@ export function LoginPage() {
                 />
                 <span className="flex-1 font-medium">{tenant.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {ROLE_LABELS[tenant.role] ?? tenant.role}
+                  {tenant.roleName}
                 </span>
               </label>
             ))}

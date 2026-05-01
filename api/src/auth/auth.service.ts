@@ -124,14 +124,22 @@ export class AuthService {
         emailVerifyToken: token,
         emailVerifyExp: { gt: new Date() },
       },
-      include: { tenantUsers: true },
+      include: {
+        tenantUsers: {
+          include: { tenant: true, role: true },
+          orderBy: { joinedAt: 'desc' },
+        },
+      },
     });
 
     if (!user) throw new NotFoundException('Token inválido ou expirado');
     if (user.emailVerifiedAt)
       throw new BadRequestException('E-mail já verificado');
 
-    const tenantUser = user.tenantUsers[0];
+    const activeTenantUsers = user.tenantUsers.filter(
+      (tu) => tu.tenant.status === TenantStatus.active,
+    );
+    const tenantUser = activeTenantUsers[0];
     if (!tenantUser)
       throw new InternalServerErrorException('Configuração de tenant ausente');
 
@@ -147,7 +155,30 @@ export class AuthService {
     const ctx = await this.loadTokenContext(user.id, tenantUser.tenantId);
     if (!ctx)
       throw new InternalServerErrorException('Configuração de tenant ausente');
-    return this.buildTokenPair(user.id, tenantUser.tenantId, ctx);
+    const { accessToken, refreshToken } = await this.buildTokenPair(
+      user.id,
+      tenantUser.tenantId,
+      ctx,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      user: { id: user.id, name: user.name, email: user.email },
+      tenant: {
+        id: tenantUser.tenant.id,
+        name: tenantUser.tenant.name,
+        slug: tenantUser.tenant.slug,
+        roleId: ctx.roleId,
+        roleName: ctx.roleName,
+      },
+      tenants: activeTenantUsers.map((tu) => ({
+        id: tu.tenant.id,
+        name: tu.tenant.name,
+        roleId: tu.roleId,
+        roleName: tu.role.name,
+      })),
+    };
   }
 
   async login(dto: LoginDto) {

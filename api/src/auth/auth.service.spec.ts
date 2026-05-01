@@ -69,7 +69,7 @@ const mockRefreshTokenRecord = {
 };
 
 // ---------------------------------------------------------------------------
-// Mock transaction helper — reused in beforeEach
+// Mock transaction helper — rebuilt in beforeEach so per-test overrides don't bleed
 // ---------------------------------------------------------------------------
 
 function buildMockTx() {
@@ -99,44 +99,40 @@ function buildMockTx() {
 }
 
 // ---------------------------------------------------------------------------
+// Module-level mocks — no explicit type annotations so TypeScript infers jest.Mock
+// ---------------------------------------------------------------------------
+
+const mockPrisma = {
+  $transaction: jest.fn(),
+  user: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    update: jest.fn(),
+  },
+  refreshToken: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    updateMany: jest.fn(),
+  },
+};
+
+const mockJwt = { sign: jest.fn() };
+const mockConfig = { getOrThrow: jest.fn() };
+const mockMail = {
+  sendVerification: jest.fn(),
+  sendPasswordReset: jest.fn(),
+};
+
+// ---------------------------------------------------------------------------
 // Test suite
 // ---------------------------------------------------------------------------
 
 describe('AuthService', () => {
   let service: AuthService;
-  let mockPrisma: jest.Mocked<Partial<PrismaService>> & {
-    $transaction: jest.Mock;
-    user: Record<string, jest.Mock>;
-    refreshToken: Record<string, jest.Mock>;
-  };
-  let mockJwt: jest.Mocked<Partial<JwtService>>;
-  let mockConfig: jest.Mocked<Partial<ConfigService>>;
-  let mockMail: jest.Mocked<Partial<MailService>>;
   let mockTx: ReturnType<typeof buildMockTx>;
 
   beforeAll(async () => {
-    mockPrisma = {
-      $transaction: jest.fn(),
-      user: {
-        findUnique: jest.fn(),
-        findFirst: jest.fn(),
-        update: jest.fn().mockResolvedValue({}),
-      },
-      refreshToken: {
-        findUnique: jest.fn(),
-        create: jest.fn().mockResolvedValue({}),
-        update: jest.fn().mockResolvedValue({}),
-        updateMany: jest.fn().mockResolvedValue({}),
-      },
-    } as any;
-
-    mockJwt = { sign: jest.fn().mockReturnValue('signed-access-token') };
-    mockConfig = { getOrThrow: jest.fn().mockReturnValue('test-pepper') };
-    mockMail = {
-      sendVerification: jest.fn().mockResolvedValue(undefined),
-      sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -154,16 +150,18 @@ describe('AuthService', () => {
     jest.clearAllMocks();
 
     mockTx = buildMockTx();
-    mockPrisma.$transaction.mockImplementation((cb: any) => cb(mockTx));
+    mockPrisma.$transaction.mockImplementation(
+      (cb: (tx: typeof mockTx) => unknown) => cb(mockTx),
+    );
 
-    mockJwt.sign!.mockReturnValue('signed-access-token');
-    mockConfig.getOrThrow!.mockReturnValue('test-pepper');
-    mockPrisma.user.update.mockResolvedValue({} as any);
-    mockPrisma.refreshToken.create.mockResolvedValue({} as any);
-    mockPrisma.refreshToken.update.mockResolvedValue({} as any);
-    mockPrisma.refreshToken.updateMany.mockResolvedValue({} as any);
-    mockMail.sendVerification!.mockResolvedValue(undefined);
-    mockMail.sendPasswordReset!.mockResolvedValue(undefined);
+    mockJwt.sign.mockReturnValue('signed-access-token');
+    mockConfig.getOrThrow.mockReturnValue('test-pepper');
+    mockPrisma.user.update.mockResolvedValue({});
+    mockPrisma.refreshToken.create.mockResolvedValue({});
+    mockPrisma.refreshToken.update.mockResolvedValue({});
+    mockPrisma.refreshToken.updateMany.mockResolvedValue({});
+    mockMail.sendVerification.mockResolvedValue(undefined);
+    mockMail.sendPasswordReset.mockResolvedValue(undefined);
 
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-pw');
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
@@ -198,7 +196,7 @@ describe('AuthService', () => {
     });
 
     it('throws ConflictException when email already exists', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser as any);
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
 
       await expect(service.register(dto)).rejects.toThrow(ConflictException);
       expect(mockMail.sendVerification).not.toHaveBeenCalled();
@@ -209,10 +207,7 @@ describe('AuthService', () => {
 
       const p2002 = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint',
-        {
-          code: 'P2002',
-          clientVersion: '7.0',
-        },
+        { code: 'P2002', clientVersion: '7.0' },
       );
       mockTx.tenant.create.mockRejectedValueOnce(p2002).mockResolvedValueOnce({
         id: 'tenant-2',
@@ -231,10 +226,7 @@ describe('AuthService', () => {
 
       const p2002 = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint',
-        {
-          code: 'P2002',
-          clientVersion: '7.0',
-        },
+        { code: 'P2002', clientVersion: '7.0' },
       );
       mockTx.tenant.create.mockRejectedValue(p2002);
 
@@ -271,7 +263,7 @@ describe('AuthService', () => {
     };
 
     it('returns token pair on success', async () => {
-      mockPrisma.user.findFirst.mockResolvedValue(userWithTenantUser as any);
+      mockPrisma.user.findFirst.mockResolvedValue(userWithTenantUser);
 
       const result = await service.verifyEmail(token);
 
@@ -300,7 +292,7 @@ describe('AuthService', () => {
       mockPrisma.user.findFirst.mockResolvedValue({
         ...userWithTenantUser,
         emailVerifiedAt: NOW,
-      } as any);
+      });
 
       await expect(service.verifyEmail(token)).rejects.toThrow(
         BadRequestException,
@@ -310,9 +302,8 @@ describe('AuthService', () => {
     it('throws InternalServerErrorException when tenantUsers array is empty', async () => {
       mockPrisma.user.findFirst.mockResolvedValue({
         ...userWithTenantUser,
-        emailVerifiedAt: null,
         tenantUsers: [],
-      } as any);
+      });
 
       await expect(service.verifyEmail(token)).rejects.toThrow(
         InternalServerErrorException,
@@ -320,7 +311,7 @@ describe('AuthService', () => {
     });
 
     it('throws InternalServerErrorException when loadTokenContext returns null', async () => {
-      mockPrisma.user.findFirst.mockResolvedValue(userWithTenantUser as any);
+      mockPrisma.user.findFirst.mockResolvedValue(userWithTenantUser);
       mockTx.tenantUser.findUnique.mockResolvedValue(null);
 
       await expect(service.verifyEmail(token)).rejects.toThrow(
@@ -337,8 +328,7 @@ describe('AuthService', () => {
     const dto = { email: 'daniel@acme.com', password: 'secret123' };
 
     it('returns tokens, user and tenant on success', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockLoginUser as any);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockPrisma.user.findUnique.mockResolvedValue(mockLoginUser);
 
       const result = await service.login(dto);
 
@@ -362,7 +352,7 @@ describe('AuthService', () => {
     });
 
     it('throws UnauthorizedException when password is wrong', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockLoginUser as any);
+      mockPrisma.user.findUnique.mockResolvedValue(mockLoginUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
@@ -372,8 +362,7 @@ describe('AuthService', () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         ...mockLoginUser,
         emailVerifiedAt: null,
-      } as any);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      });
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
@@ -386,19 +375,17 @@ describe('AuthService', () => {
             ...mockLoginUser.tenantUsers[0],
             tenant: {
               ...mockLoginUser.tenantUsers[0].tenant,
-              status: TenantStatus.inactive,
+              status: TenantStatus.suspended,
             },
           },
         ],
-      } as any);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      });
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
 
     it('throws UnauthorizedException when loadTokenContext returns null', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockLoginUser as any);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockPrisma.user.findUnique.mockResolvedValue(mockLoginUser);
       mockTx.tenantUser.findUnique.mockResolvedValue(null);
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
@@ -412,7 +399,7 @@ describe('AuthService', () => {
   describe('refresh', () => {
     it('rotates tokens on success', async () => {
       mockPrisma.refreshToken.findUnique.mockResolvedValue(
-        mockRefreshTokenRecord as any,
+        mockRefreshTokenRecord,
       );
 
       const result = await service.refresh('raw-refresh-token');
@@ -443,7 +430,7 @@ describe('AuthService', () => {
       mockPrisma.refreshToken.findUnique.mockResolvedValue({
         ...mockRefreshTokenRecord,
         revokedAt: NOW,
-      } as any);
+      });
 
       await expect(service.refresh('raw-refresh-token')).rejects.toThrow(
         UnauthorizedException,
@@ -454,7 +441,7 @@ describe('AuthService', () => {
       mockPrisma.refreshToken.findUnique.mockResolvedValue({
         ...mockRefreshTokenRecord,
         expiresAt: new Date(Date.now() - 1000),
-      } as any);
+      });
 
       await expect(service.refresh('raw-refresh-token')).rejects.toThrow(
         UnauthorizedException,
@@ -463,12 +450,12 @@ describe('AuthService', () => {
 
     it('throws UnauthorizedException when tenant becomes inactive after rotation', async () => {
       mockPrisma.refreshToken.findUnique.mockResolvedValue(
-        mockRefreshTokenRecord as any,
+        mockRefreshTokenRecord,
       );
       mockTx.tenantUser.findUnique.mockResolvedValue({
         ...mockTenantUserRecord,
-        tenant: { status: TenantStatus.inactive },
-      } as any);
+        tenant: { status: TenantStatus.suspended },
+      });
 
       await expect(service.refresh('raw-refresh-token')).rejects.toThrow(
         UnauthorizedException,
@@ -513,7 +500,7 @@ describe('AuthService', () => {
     });
 
     it('stores SHA-256 hash in DB and sends raw token via email', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser as any);
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
 
       const result = await service.forgotPassword(dto);
 
@@ -528,16 +515,13 @@ describe('AuthService', () => {
         }),
       );
 
-      const updateCall = (mockPrisma.user.update as jest.Mock).mock.calls[0][0];
+      const updateCall = mockPrisma.user.update.mock.calls[0][0];
       const storedHash = updateCall.data.resetPasswordToken;
 
-      const sendCall = (mockMail.sendPasswordReset as jest.Mock).mock.calls[0];
+      const sendCall = mockMail.sendPasswordReset.mock.calls[0];
       const rawToken: string = sendCall[2];
 
-      // The raw token must be different from the stored hash
       expect(rawToken).not.toBe(storedHash);
-
-      // SHA-256 of the raw token must equal the stored hash
       expect(createHash('sha256').update(rawToken).digest('hex')).toBe(
         storedHash,
       );
@@ -552,7 +536,7 @@ describe('AuthService', () => {
     const dto = { token: 'raw-reset-token', password: 'newSecret123' };
 
     it('updates password and revokes all refresh tokens on success', async () => {
-      mockPrisma.user.findFirst.mockResolvedValue(mockUser as any);
+      mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 
       const result = await service.resetPassword(dto);
 
@@ -576,7 +560,7 @@ describe('AuthService', () => {
     });
 
     it('queries DB using SHA-256 hash of the raw token, not the raw token itself', async () => {
-      mockPrisma.user.findFirst.mockResolvedValue(mockUser as any);
+      mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 
       await service.resetPassword(dto);
 
@@ -634,8 +618,8 @@ describe('AuthService', () => {
     it('throws ForbiddenException when target tenant is inactive', async () => {
       mockTx.tenantUser.findUnique.mockResolvedValue({
         ...mockTenantUserRecord,
-        tenant: { status: TenantStatus.inactive },
-      } as any);
+        tenant: { status: TenantStatus.suspended },
+      });
 
       await expect(
         service.switchTenant('user-1', 'tenant-1', undefined),

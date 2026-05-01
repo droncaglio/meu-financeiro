@@ -7,3 +7,13 @@ meu-financeiro.vps-kinghost.net, mytestdomain.com.br, www.mytestdomain.com.br {
         reverse_proxy web:80
     }
 }
+
+novo.consteleonline.com {
+    handle /api/* {
+        reverse_proxy localhost:3001
+    }
+
+    handle {
+        reverse_proxy localhost:8082
+    }
+}

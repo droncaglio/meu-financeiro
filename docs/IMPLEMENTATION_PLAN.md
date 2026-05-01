@@ -8,7 +8,7 @@
 ## Visão Geral das Etapas
 
 - [x] **Step 1** — Setup do Monorepo e Infraestrutura Base
-- [ ] **Step 2** — Autenticação (Auth)
+- [x] **Step 2** — Autenticação (Auth) *(backend + frontend integrados e em produção; RBAC pendente)*
 - [ ] **Step 3** — Plano de Contas
 - [ ] **Step 4** — Lançamentos Contábeis
 - [ ] **Step 5** — Relatórios (BP, DRE, BV)
@@ -23,98 +23,99 @@
 ## Step 1 — Setup do Monorepo e Infraestrutura Base
 
 ### Git e Estrutura
-- [ ] `git init` na raiz `/home/daniel/meu-financeiro`
-- [ ] Criar `.gitignore` (node_modules, .env, dist, .DS_Store)
-- [ ] Criar pastas `api/` e `web/`
-- [ ] Primeiro commit com os documentos de especificação
+- [x] `git init` na raiz `/home/daniel/meu-financeiro`
+- [x] Criar `.gitignore` (node_modules, .env, dist, .DS_Store)
+- [x] Criar pastas `api/` e `web/`
+- [x] Primeiro commit com os documentos de especificação
 
 ### Docker Compose
-- [ ] Criar `docker-compose.yml` com serviço `postgres:16-alpine` na porta 5432
-- [ ] Adicionar serviço `adminer` (porta 8080) para inspeção do banco em dev
-- [ ] Criar `.env` na raiz com: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-- [ ] Validar: `docker compose up -d` sobe sem erro
-- [ ] Validar: Adminer acessível em `http://localhost:8080`
+- [x] Criar `docker-compose.yml` com serviço `postgres:16-alpine` na porta 5432
+- [x] Adicionar serviço `adminer` (porta 8080) para inspeção do banco em dev
+- [x] Criar `.env` na raiz com: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- [x] Validar: `docker compose up -d` sobe sem erro
+- [x] Validar: Adminer acessível em `http://localhost:8080`
 
 ### NestJS API (`/api`)
-- [ ] Scaffold: `npx @nestjs/cli new api --package-manager npm --skip-git`
-- [ ] Instalar dependências de produção:
-  - [ ] `@nestjs/config`
-  - [ ] `@prisma/client` + `prisma`
-  - [ ] `@nestjs/jwt` + `@nestjs/passport` + `passport` + `passport-jwt`
-  - [ ] `bcryptjs`
-  - [ ] `class-validator` + `class-transformer`
-  - [ ] `@nestjs/swagger` + `swagger-ui-express`
-- [ ] Instalar dependências de tipos: `@types/bcryptjs` `@types/passport-jwt`
-- [ ] Configurar `main.ts`: ValidationPipe global, Swagger em `/api/docs`, prefixo `/api/v1`
-- [ ] Criar `src/database/prisma.service.ts` com `PrismaService` singleton
-- [ ] Criar `src/common/interceptors/tenant-context.interceptor.ts` (seta `app.current_tenant_id` no PostgreSQL)
-- [ ] Criar endpoint `GET /api/health` retornando `{ status: 'ok', timestamp: ... }`
-- [ ] Validar: `npm run start:dev` responde em `http://localhost:3000`
-- [ ] Validar: Swagger acessível em `http://localhost:3000/api/docs`
+- [x] Scaffold: `npx @nestjs/cli new api --package-manager npm --skip-git`
+- [x] Instalar dependências de produção:
+  - [x] `@nestjs/config`
+  - [x] `@prisma/client` + `prisma`
+  - [x] `@nestjs/jwt` + `@nestjs/passport` + `passport` + `passport-jwt`
+  - [x] `bcryptjs`
+  - [x] `class-validator` + `class-transformer`
+  - [x] `@nestjs/swagger` + `swagger-ui-express`
+- [x] Instalar dependências de tipos: `@types/bcryptjs` `@types/passport-jwt`
+- [x] Configurar `main.ts`: ValidationPipe global, Swagger em `/api/docs`, prefixo `/api/v1`
+- [x] Criar `src/database/prisma.service.ts` com `PrismaService` singleton
+- [x] Criar `src/common/interceptors/tenant-context.interceptor.ts` (seta `app.current_tenant_id` no PostgreSQL)
+- [x] Criar endpoint `GET /api/health` retornando `{ status: 'ok', timestamp: ... }`
+- [x] Validar: `npm run start:dev` responde em `http://localhost:3000`
+- [x] Validar: Swagger acessível em `http://localhost:3000/api/docs`
 
 ### Prisma Schema (`/api/prisma`)
-- [ ] Criar `prisma/schema.prisma` com provider `postgresql` e `uuid` como default
-- [ ] Modelar tabela `tenants` (id, name, slug, status, timestamps)
-- [ ] Modelar tabela `users` (id, email, password_hash, name, is_super_user, email_verified_at, tokens, timestamps)
-- [ ] Modelar tabela `roles` (id, tenant_id, name, description, is_system, timestamps)
-- [ ] Modelar tabela `role_permissions` (id, role_id, permission — UNIQUE role+permission)
-- [ ] Modelar tabela `tenant_users` (id, tenant_id, user_id, role_id, joined_at — UNIQUE tenant+user)
-- [ ] Modelar tabela `refresh_tokens` (id, user_id, tenant_id, token_hash, expires_at, revoked_at)
-- [ ] Modelar tabela `audit_logs` (id, tenant_id, user_id, is_super_user, action, entity, entity_id, payload Json, ip, created_at)
-- [ ] Rodar `npx prisma migrate dev --name init`
-- [ ] Criar `prisma/rls-policies.sql` com políticas RLS para as tabelas com tenant_id
-- [ ] Executar script SQL das políticas RLS no banco
-- [ ] Validar: `npx prisma studio` abre e mostra as tabelas
+- [x] Criar `prisma/schema.prisma` com provider `postgresql` e `uuid` como default
+- [x] Modelar tabela `tenants` (id, name, slug, status, timestamps)
+- [x] Modelar tabela `users` (id, email, password_hash, name, is_super_user, email_verified_at, tokens, timestamps)
+- [ ] Modelar tabela `roles` (id, tenant_id, name, description, is_system, timestamps) *(RBAC — pendente)*
+- [ ] Modelar tabela `role_permissions` (id, role_id, permission — UNIQUE role+permission) *(RBAC — pendente)*
+- [ ] Modelar tabela `tenant_users` (id, tenant_id, user_id, **role_id**, joined_at — UNIQUE tenant+user) *(migrar de role enum para role_id FK — pendente)*
+- [x] Modelar tabela `refresh_tokens` (id, user_id, tenant_id, token_hash, expires_at, revoked_at)
+- [x] Modelar tabela `audit_logs` (id, tenant_id, user_id, is_super_user, action, entity, entity_id, payload Json, ip, created_at)
+- [x] Rodar `npx prisma migrate dev --name init`
+- [x] Criar `prisma/rls-policies.sql` com políticas RLS para as tabelas com tenant_id
+- [x] Executar script SQL das políticas RLS no banco
+- [x] Validar: `npx prisma studio` abre e mostra as tabelas
 
 ### React + Vite (`/web`)
-- [ ] Scaffold: `npm create vite@latest web -- --template react-ts`
-- [ ] Instalar dependências:
-  - [ ] `tailwindcss` + `postcss` + `autoprefixer` — `npx tailwindcss init -p`
-  - [ ] `react-router-dom`
-  - [ ] `axios`
-  - [ ] `@tanstack/react-query`
-  - [ ] `zustand`
-  - [ ] `react-hook-form` + `zod` + `@hookform/resolvers`
-  - [ ] `@tanstack/react-table`
-  - [ ] `recharts`
-- [ ] Inicializar shadcn/ui: `npx shadcn@latest init`
-- [ ] Instalar componentes shadcn base: `button`, `input`, `form`, `dialog`, `dropdown-menu`, `toast`
-- [ ] Criar `src/lib/api.ts` — instância Axios com interceptor de Bearer token e refresh automático
-- [ ] Criar `src/lib/query-client.ts` — configuração do TanStack Query
-- [ ] Criar `src/store/auth.store.ts` — Zustand com user, tenant, tokens, actions (login, logout, switchTenant)
-- [ ] Criar `src/App.tsx` com RouterProvider e rotas base (login, register, verify-email, app)
-- [ ] Criar layout básico da aplicação autenticada (sidebar + topbar + footer de abas placeholder)
-- [ ] Validar: `npm run dev` abre em `http://localhost:5173` sem erros
+- [x] Scaffold: `npm create vite@latest web -- --template react-ts`
+- [x] Instalar dependências:
+  - [x] `tailwindcss` + vite plugin (`@tailwindcss/vite`)
+  - [x] `react-router-dom`
+  - [x] `axios`
+  - [x] `@tanstack/react-query`
+  - [x] `zustand`
+  - [x] `react-hook-form` + `zod` + `@hookform/resolvers`
+  - [x] `@tanstack/react-table`
+  - [x] `recharts`
+- [x] Inicializar shadcn/ui: `npx shadcn@latest init`
+- [x] Instalar componentes shadcn base: `button`, `input`, `card`, `dialog`, `label`, `sonner`
+- [x] Criar `src/lib/api.ts` — instância Axios com interceptor de Bearer token e refresh automático
+- [x] Criar `src/lib/query-client.ts` — configuração do TanStack Query
+- [x] Criar `src/store/auth.store.ts` — Zustand com user, tenant, tokens, actions (login, logout, switchTenant)
+- [x] Criar `src/App.tsx` com RouterProvider e rotas base (login, register, verify-email, app)
+- [x] Criar layout básico da aplicação autenticada (sidebar + topbar + footer de abas placeholder)
+- [x] Validar: `npm run dev` abre em `http://localhost:5173` sem erros
 
 ---
 
 ## Step 2 — Autenticação
 
 ### Backend (NestJS)
-- [ ] Criar módulo `auth` com NestJS CLI
-- [ ] Criar `AuthService`: `register`, `verifyEmail`, `login`, `refresh`, `logout`, `forgotPassword`, `resetPassword`, `switchTenant`
-- [ ] Implementar hash de senha com pepper: `bcrypt(APP_PEPPER + password)`
-- [ ] Implementar envio de e-mail de confirmação (nodemailer ou provider SMTP)
-- [ ] Criar `JwtStrategy` (passport) para validar access token
-- [ ] Criar `JwtAuthGuard` para proteger rotas
-- [ ] Criar `PermissionsGuard` — carrega permissões do role do usuário no tenant e valida contra `@RequiresPermission()`
-- [ ] Criar `SuperUserGuard` para rotas de admin do sistema
-- [ ] Criar decorators: `@CurrentUser()`, `@CurrentTenant()`, `@RequiresPermission('recurso:ação')`, `@SuperUser()`
-- [ ] Implementar `TenantContextInterceptor` — seta `SET LOCAL app.current_tenant_id` antes de cada query
-- [ ] Criar `AuthController` com todos os endpoints (POST /register, GET /verify-email, POST /login, POST /refresh, POST /logout, POST /forgot-password, POST /reset-password, POST /switch-tenant)
-- [ ] Ao criar tenant (em `verifyEmail`): criar role **owner** (`is_system=true`) com todas as 16 permissões e vincular o usuário a esse role
-- [ ] Adicionar tabelas `roles` e `role_permissions` ao schema Prisma e rodar migration
-- [ ] Testar todos os endpoints no Swagger
+- [x] Criar módulo `auth` com NestJS CLI
+- [x] Criar `AuthService`: `register`, `verifyEmail`, `login`, `refresh`, `logout`, `forgotPassword`, `resetPassword`, `switchTenant`
+- [x] Implementar hash de senha com pepper: `bcrypt(APP_PEPPER + password)`
+- [x] Implementar envio de e-mail de confirmação (nodemailer + SMTP)
+- [x] Criar `JwtStrategy` (passport) para validar access token
+- [x] Criar `JwtAuthGuard` para proteger rotas
+- [ ] Criar `PermissionsGuard` — carrega permissões do role do usuário no tenant e valida contra `@RequiresPermission()` *(RBAC — pendente)*
+- [ ] Criar `SuperUserGuard` para rotas de admin do sistema *(pendente)*
+- [x] Criar decorators: `@CurrentUser()`, `@CurrentTenant()`, `@Public()`
+- [ ] Criar decorator `@RequiresPermission('recurso:ação')` *(RBAC — pendente; existe @Roles() legado)*
+- [x] Implementar `TenantContextInterceptor` — seta `SET LOCAL app.current_tenant_id` antes de cada query
+- [x] Criar `AuthController` com todos os endpoints (POST /register, POST /verify-email, POST /login, POST /refresh, POST /logout, POST /forgot-password, POST /reset-password, POST /switch-tenant)
+- [ ] Ao criar tenant (em `verifyEmail`): criar role **owner** (`is_system=true`) com todas as 16 permissões e vincular o usuário a esse role *(RBAC — pendente)*
+- [ ] Adicionar tabelas `roles` e `role_permissions` ao schema Prisma e rodar migration *(RBAC — pendente)*
+- [x] Testar todos os endpoints no Swagger
 
 ### Frontend (React)
-- [ ] Criar `pages/auth/RegisterPage.tsx` (formulário: nome, email, senha, nome da empresa)
-- [ ] Criar `pages/auth/LoginPage.tsx` (formulário: email, senha + seleção de tenant se múltiplos)
-- [ ] Criar `pages/auth/VerifyEmailPage.tsx` (lê token da URL, chama API, redireciona)
-- [ ] Criar `pages/auth/ForgotPasswordPage.tsx`
-- [ ] Criar `pages/auth/ResetPasswordPage.tsx`
-- [ ] Implementar rota protegida — redireciona para `/login` se não autenticado
-- [ ] Implementar refresh automático de token no interceptor Axios
-- [ ] Testar fluxo completo: cadastro → e-mail → confirmação → login → dashboard
+- [x] Criar `pages/auth/RegisterPage.tsx` (formulário: nome, email, senha, nome da empresa)
+- [x] Criar `pages/auth/LoginPage.tsx` (formulário: email, senha + seleção de tenant se múltiplos)
+- [x] Criar `pages/auth/VerifyEmailPage.tsx` (lê token da URL, chama API, redireciona)
+- [x] Criar `pages/auth/ForgotPasswordPage.tsx`
+- [x] Criar `pages/auth/ResetPasswordPage.tsx`
+- [x] Implementar rota protegida — redireciona para `/login` se não autenticado
+- [x] Implementar refresh automático de token no interceptor Axios (httpOnly cookie)
+- [x] Testar fluxo completo: cadastro → e-mail → confirmação → login → dashboard
 
 ---
 

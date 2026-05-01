@@ -10,10 +10,10 @@ export function AuthLayout({ title, children }: AuthLayoutProps) {
     <main className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1 pb-4">
-          <p className="text-xl font-bold tracking-tight text-center">
+          <h1 className="text-xl font-bold tracking-tight text-center">
             Meu Financeiro
-          </p>
-          <h1 className="text-lg font-semibold text-center">{title}</h1>
+          </h1>
+          <p className="text-lg font-semibold text-center">{title}</p>
         </CardHeader>
         <CardContent>{children}</CardContent>
       </Card>

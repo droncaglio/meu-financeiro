@@ -9,9 +9,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, TenantStatus, TenantUserRole } from '@prisma/client';
+import { Prisma, TenantStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
+import { ALL_PERMISSIONS } from '../common/constants/permissions';
 import { PrismaService } from '../database/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -21,6 +22,14 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface TokenSigningContext {
+  tenantStatus: TenantStatus;
+  roleId: string;
+  roleName: string;
+  isSuperUser: boolean;
+  permissions: string[];
+}
 
 @Injectable()
 export class AuthService {
@@ -80,13 +89,26 @@ export class AuthService {
           'Não foi possível gerar slug único',
         );
 
+      const ownerRole = await tx.role.create({
+        data: {
+          tenantId: tenant.id,
+          name: 'Owner',
+          description: 'Acesso total ao tenant',
+          isSystem: true,
+          permissions: {
+            create: ALL_PERMISSIONS.map((permission) => ({ permission })),
+          },
+        },
+      });
+
       await tx.tenantUser.create({
         data: {
           userId: created.id,
           tenantId: tenant.id,
-          role: TenantUserRole.admin,
+          roleId: ownerRole.id,
         },
       });
+
       return created;
     });
 
@@ -122,7 +144,10 @@ export class AuthService {
       },
     });
 
-    return this.mintTokens(user.id, tenantUser.tenantId, tenantUser.role);
+    const ctx = await this.loadTokenContext(user.id, tenantUser.tenantId);
+    if (!ctx)
+      throw new InternalServerErrorException('Configuração de tenant ausente');
+    return this.buildTokenPair(user.id, tenantUser.tenantId, ctx);
   }
 
   async login(dto: LoginDto) {
@@ -130,7 +155,7 @@ export class AuthService {
       where: { email: dto.email },
       include: {
         tenantUsers: {
-          include: { tenant: true },
+          include: { tenant: true, role: true },
           orderBy: { joinedAt: 'desc' },
         },
       },
@@ -158,10 +183,12 @@ export class AuthService {
       throw new UnauthorizedException('Nenhum tenant ativo');
 
     const selected = activeTenantUsers[0];
-    const { accessToken, refreshToken } = await this.mintTokens(
+    const ctx = await this.loadTokenContext(user.id, selected.tenantId);
+    if (!ctx) throw new UnauthorizedException('Sem acesso a este tenant');
+    const { accessToken, refreshToken } = await this.buildTokenPair(
       user.id,
       selected.tenantId,
-      selected.role,
+      ctx,
     );
 
     return {
@@ -172,12 +199,14 @@ export class AuthService {
         id: selected.tenant.id,
         name: selected.tenant.name,
         slug: selected.tenant.slug,
-        role: selected.role,
+        roleId: ctx.roleId,
+        roleName: ctx.roleName,
       },
       tenants: activeTenantUsers.map((tu) => ({
         id: tu.tenant.id,
         name: tu.tenant.name,
-        role: tu.role,
+        roleId: tu.roleId,
+        roleName: tu.role.name,
       })),
     };
   }
@@ -194,21 +223,20 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token inválido ou expirado');
     }
 
+    if (!record.tenantId) throw new UnauthorizedException('Token inválido');
+    const tenantId = record.tenantId;
+
     await this.prisma.refreshToken.update({
       where: { id: record.id },
       data: { revokedAt: new Date() },
     });
 
-    const tenantUser = await this.prisma.tenantUser.findFirst({
-      where: { userId: record.userId, tenantId: record.tenantId ?? undefined },
-      include: { tenant: true },
-    });
-
-    if (!tenantUser || tenantUser.tenant.status !== TenantStatus.active) {
+    const ctx = await this.loadTokenContext(record.userId, tenantId);
+    if (!ctx || ctx.tenantStatus !== TenantStatus.active) {
       throw new UnauthorizedException('Acesso ao tenant revogado ou inativo');
     }
 
-    return this.mintTokens(record.userId, record.tenantId!, tenantUser.role);
+    return this.buildTokenPair(record.userId, tenantId, ctx);
   }
 
   async logout(currentToken: string | undefined) {
@@ -275,15 +303,11 @@ export class AuthService {
     tenantId: string,
     currentRefreshToken: string | undefined,
   ) {
-    const tenantUser = await this.prisma.tenantUser.findUnique({
-      where: { tenantId_userId: { tenantId, userId } },
-      include: { tenant: true },
-    });
+    const ctx = await this.loadTokenContext(userId, tenantId);
 
-    if (!tenantUser) throw new ForbiddenException('Sem acesso a este tenant');
-    if (tenantUser.tenant.status !== TenantStatus.active) {
+    if (!ctx) throw new ForbiddenException('Sem acesso a este tenant');
+    if (ctx.tenantStatus !== TenantStatus.active)
       throw new ForbiddenException('Tenant inativo');
-    }
 
     if (currentRefreshToken) {
       const tokenHash = createHash('sha256')
@@ -295,15 +319,54 @@ export class AuthService {
       });
     }
 
-    return this.mintTokens(userId, tenantId, tenantUser.role);
+    return this.buildTokenPair(userId, tenantId, ctx);
   }
 
-  private async mintTokens(
+  private async loadTokenContext(
     userId: string,
     tenantId: string,
-    role: TenantUserRole,
+  ): Promise<TokenSigningContext | null> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`;
+      const [tenantUser, user] = await Promise.all([
+        tx.tenantUser.findUnique({
+          where: { tenantId_userId: { tenantId, userId } },
+          include: {
+            tenant: { select: { status: true } },
+            role: { include: { permissions: true } },
+          },
+        }),
+        tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: { isSuperUser: true },
+        }),
+      ]);
+
+      if (!tenantUser) return null;
+
+      return {
+        tenantStatus: tenantUser.tenant.status,
+        roleId: tenantUser.roleId,
+        roleName: tenantUser.role.name,
+        isSuperUser: user.isSuperUser,
+        permissions: tenantUser.role.permissions.map((p) => p.permission),
+      };
+    });
+  }
+
+  private async buildTokenPair(
+    userId: string,
+    tenantId: string,
+    ctx: TokenSigningContext,
   ) {
-    const accessToken = this.jwt.sign({ sub: userId, tenantId, role });
+    const accessToken = this.jwt.sign({
+      sub: userId,
+      tenantId,
+      roleId: ctx.roleId,
+      roleName: ctx.roleName,
+      isSuperUser: ctx.isSuperUser,
+      permissions: ctx.permissions,
+    });
 
     const rawToken = randomBytes(64).toString('hex');
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');

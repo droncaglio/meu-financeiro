@@ -1,19 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { TenantUserRole } from '@prisma/client';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 export interface AuthUser {
   userId: string;
   tenantId: string;
-  role: TenantUserRole;
+  roleId: string;
+  roleName: string;
+  isSuperUser: boolean;
+  permissions: string[];
 }
 
 interface JwtPayload {
   sub: string;
   tenantId: string;
-  role: TenantUserRole;
+  roleId: string;
+  roleName: string;
+  isSuperUser: boolean;
+  permissions: string[];
 }
 
 @Injectable()
@@ -30,7 +35,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       userId: payload.sub,
       tenantId: payload.tenantId,
-      role: payload.role,
+      roleId: payload.roleId,
+      roleName: payload.roleName,
+      isSuperUser: payload.isSuperUser,
+      permissions: payload.permissions,
     };
   }
 }

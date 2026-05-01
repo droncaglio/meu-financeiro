@@ -14,12 +14,6 @@ enum TenantStatus {
   cancelled
 }
 
-enum TenantUserRole {
-  admin
-  financial
-  viewer
-}
-
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Tenant {
@@ -31,6 +25,7 @@ model Tenant {
   updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   tenantUsers   TenantUser[]
+  roles         Role[]
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
 
@@ -59,17 +54,46 @@ model User {
   @@map("users")
 }
 
+model Role {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  tenantUsers TenantUser[]
+
+  @@unique([tenantId, name])
+  @@map("roles")
+}
+
+model RolePermission {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleId     String @map("role_id") @db.Uuid
+  permission String @db.VarChar(100)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@map("role_permissions")
+}
+
 model TenantUser {
-  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String         @map("tenant_id") @db.Uuid
-  userId      String         @map("user_id") @db.Uuid
-  role        TenantUserRole @default(viewer)
-  invitedById String?        @map("invited_by_id") @db.Uuid
-  joinedAt    DateTime       @default(now()) @map("joined_at") @db.Timestamptz(6)
-  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  roleId      String   @map("role_id") @db.Uuid
+  invitedById String?  @map("invited_by_id") @db.Uuid
+  joinedAt    DateTime @default(now()) @map("joined_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role   @relation(fields: [roleId], references: [id])
   invitedBy User?  @relation("InvitedBy", fields: [invitedById], references: [id])
 
   @@unique([tenantId, userId])

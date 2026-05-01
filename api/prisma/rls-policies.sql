@@ -31,6 +31,26 @@ CREATE POLICY tenant_isolation ON audit_logs
     OR tenant_id = current_setting('app.current_tenant_id', true)::uuid
   );
 
+-- ─── Policies: roles ─────────────────────────────────────────────────────────
+
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON roles
+  USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+-- ─── Policies: role_permissions ──────────────────────────────────────────────
+-- Isolamento via join com roles (role_permissions não tem tenant_id direto).
+
+ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON role_permissions
+  USING (
+    role_id IN (
+      SELECT id FROM roles
+      WHERE tenant_id = current_setting('app.current_tenant_id', true)::uuid
+    )
+  );
+
 -- ─── Garantir que o app user não é superuser do PG ───────────────────────────
 -- O app user (mfuser) NÃO deve ser SUPERUSER — SUPERUSER ignora RLS.
 -- Verificar: SELECT rolsuper FROM pg_roles WHERE rolname = 'mfuser';

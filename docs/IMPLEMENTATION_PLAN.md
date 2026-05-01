@@ -8,7 +8,7 @@
 ## Visão Geral das Etapas
 
 - [x] **Step 1** — Setup do Monorepo e Infraestrutura Base
-- [x] **Step 2** — Autenticação (Auth) *(backend + frontend integrados e em produção; RBAC pendente)*
+- [x] **Step 2** — Autenticação (Auth) *(backend + frontend integrados e em produção; RBAC completo)*
 - [ ] **Step 3** — Plano de Contas
 - [ ] **Step 4** — Lançamentos Contábeis
 - [ ] **Step 5** — Relatórios (BP, DRE, BV)
@@ -56,9 +56,9 @@
 - [x] Criar `prisma/schema.prisma` com provider `postgresql` e `uuid` como default
 - [x] Modelar tabela `tenants` (id, name, slug, status, timestamps)
 - [x] Modelar tabela `users` (id, email, password_hash, name, is_super_user, email_verified_at, tokens, timestamps)
-- [ ] Modelar tabela `roles` (id, tenant_id, name, description, is_system, timestamps) *(RBAC — pendente)*
-- [ ] Modelar tabela `role_permissions` (id, role_id, permission — UNIQUE role+permission) *(RBAC — pendente)*
-- [ ] Modelar tabela `tenant_users` (id, tenant_id, user_id, **role_id**, joined_at — UNIQUE tenant+user) *(migrar de role enum para role_id FK — pendente)*
+- [x] Modelar tabela `roles` (id, tenant_id, name, description, is_system, timestamps)
+- [x] Modelar tabela `role_permissions` (id, role_id, permission — UNIQUE role+permission)
+- [x] Modelar tabela `tenant_users` (id, tenant_id, user_id, role_id, joined_at — UNIQUE tenant+user)
 - [x] Modelar tabela `refresh_tokens` (id, user_id, tenant_id, token_hash, expires_at, revoked_at)
 - [x] Modelar tabela `audit_logs` (id, tenant_id, user_id, is_super_user, action, entity, entity_id, payload Json, ip, created_at)
 - [x] Rodar `npx prisma migrate dev --name init`
@@ -97,14 +97,14 @@
 - [x] Implementar envio de e-mail de confirmação (nodemailer + SMTP)
 - [x] Criar `JwtStrategy` (passport) para validar access token
 - [x] Criar `JwtAuthGuard` para proteger rotas
-- [ ] Criar `PermissionsGuard` — carrega permissões do role do usuário no tenant e valida contra `@RequiresPermission()` *(RBAC — pendente)*
-- [ ] Criar `SuperUserGuard` para rotas de admin do sistema *(pendente)*
+- [x] Criar `PermissionsGuard` — valida permissões do JWT contra `@RequiresPermission()`
+- [x] Criar `SuperUserGuard` para rotas de admin do sistema
 - [x] Criar decorators: `@CurrentUser()`, `@CurrentTenant()`, `@Public()`
-- [ ] Criar decorator `@RequiresPermission('recurso:ação')` *(RBAC — pendente; existe @Roles() legado)*
+- [x] Criar decorator `@RequiresPermission('recurso:ação')`
 - [x] Implementar `TenantContextInterceptor` — seta `SET LOCAL app.current_tenant_id` antes de cada query
 - [x] Criar `AuthController` com todos os endpoints (POST /register, POST /verify-email, POST /login, POST /refresh, POST /logout, POST /forgot-password, POST /reset-password, POST /switch-tenant)
-- [ ] Ao criar tenant (em `verifyEmail`): criar role **owner** (`is_system=true`) com todas as 16 permissões e vincular o usuário a esse role *(RBAC — pendente)*
-- [ ] Adicionar tabelas `roles` e `role_permissions` ao schema Prisma e rodar migration *(RBAC — pendente)*
+- [x] Ao criar tenant (em `register`): criar role **Owner** (`is_system=true`) com todas as 16 permissões e vincular o usuário a esse role
+- [x] Adicionar tabelas `roles` e `role_permissions` ao schema Prisma e rodar migration
 - [x] Testar todos os endpoints no Swagger
 
 ### Frontend (React)

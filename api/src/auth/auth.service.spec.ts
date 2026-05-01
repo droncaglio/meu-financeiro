@@ -258,7 +258,19 @@ describe('AuthService', () => {
       ...mockUser,
       emailVerifiedAt: null,
       tenantUsers: [
-        { tenantId: 'tenant-1', userId: 'user-1', roleId: 'role-1' },
+        {
+          tenantId: 'tenant-1',
+          userId: 'user-1',
+          roleId: 'role-1',
+          joinedAt: NOW,
+          role: { id: 'role-1', name: 'Owner' },
+          tenant: {
+            id: 'tenant-1',
+            name: 'Acme',
+            slug: 'acme',
+            status: TenantStatus.active,
+          },
+        },
       ],
     };
 
@@ -267,10 +279,17 @@ describe('AuthService', () => {
 
       const result = await service.verifyEmail(token);
 
-      expect(result).toEqual({
-        accessToken: 'signed-access-token',
-        refreshToken: expect.any(String),
+      expect(result.accessToken).toBe('signed-access-token');
+      expect(result.refreshToken).toEqual(expect.any(String));
+      expect(result.user).toEqual({
+        id: 'user-1',
+        name: 'Daniel',
+        email: 'daniel@acme.com',
       });
+      expect(result.tenant).toEqual(
+        expect.objectContaining({ id: 'tenant-1', name: 'Acme' }),
+      );
+      expect(result.tenants).toHaveLength(1);
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'user-1' },

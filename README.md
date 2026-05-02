@@ -82,4 +82,4 @@ npm run dev
 
 ## Licença
 
-Privado — todos os direitos reservados.
+Privado — todos os direitos reservados. 
